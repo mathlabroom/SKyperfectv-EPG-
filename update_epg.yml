@@ -1,0 +1,34 @@
+name: Update Japan EPG
+
+on:
+  schedule:
+    # 每天北京时间凌晨 2:00 自动运行 (UTC 18:00)
+    - cron: '0 18 * * *'
+  workflow_dispatch: # 允许你手动点击按钮立即运行
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4
+
+      - name: Run Scraper
+        run: python skyperfectv_epg.py  # 确保这里名字对上
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "EPG-Bot"
+          git config --global user.email "bot@github.com"
+          git add epg_ultimate.xml
+          git commit -m "Update EPG: $(date)" || exit 0
+          git push
