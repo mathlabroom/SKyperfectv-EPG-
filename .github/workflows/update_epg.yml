@@ -2,33 +2,35 @@ name: Update Japan EPG
 
 on:
   schedule:
-    # 每天北京时间凌晨 2:00 自动运行 (UTC 18:00)
-    - cron: '0 18 * * *'
-  workflow_dispatch: # 允许你手动点击按钮立即运行
+    - cron: '0 18 * * *' # 每天北京时间凌晨2点运行
+  workflow_dispatch:      # 允许手动触发
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # 解决你的 Node.js 20 警告
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # 升级到 v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5 # 升级到 v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
-          pip install requests beautifulsoup4
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4 lxml  # 增加 lxml 提高解析效率
 
       - name: Run Scraper
-        run: python your_scraper_script.py  # 确保这里名字对上
+        run: python skyperfectv_epg.py
 
       - name: Commit and Push
         run: |
-          git config --global user.name "EPG-Bot"
-          git config --global user.email "bot@github.com"
-          git add epg_ultimate.xml
-          git commit -m "Update EPG: $(date)" || exit 0
-          git push
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add epg_ultimate.xml || echo "No changes to commit"
+          git commit -m "Update EPG: $(date)" || echo "No changes to commit"
+          git push || echo "Push failed"
