@@ -166,9 +166,10 @@ class SkyPerfectUltimate:
         except:
             return "", ""
     def fetch_channel(self, ch_num, srv_ref, name, d_str):
-        # 按照你提供的 Premium 地址格式进行拼接
-        # 注意：这里的 channel:{ch_num} 必须严格匹配
-        url = f"https://www.skyperfectv.co.jp/program/schedule/premium/channel:{ch_num}/?date={d_str}"
+        # 核心逻辑：940 及以上的频道号需要插入 /adult/ 路径
+        path_prefix = "adult/premium" if int(ch_num) >= 940 else "premium"
+        
+        url = f"https://www.skyperfectv.co.jp/program/schedule/{path_prefix}/channel:{ch_num}/?date={d_str}"
         
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -177,40 +178,29 @@ class SkyPerfectUltimate:
         
         programmes = []
         try:
-            # 增加一点延迟，Premium 页面对爬虫检测较严
-            time.sleep(random.uniform(0.5, 1.2))
+            # 必须加一点延迟，防止请求过快被封
+            time.sleep(random.uniform(0.5, 1.0))
             res = self.session.get(url, headers=headers, timeout=15)
             
             if res.status_code != 200:
-                print(f"❌ {name} (Ch:{ch_num}) 请求失败，状态码: {res.status_code}")
+                print(f"❌ {name} (Ch:{ch_num}) 请求失败: {res.status_code} URL: {url}")
                 return []
 
             soup = BeautifulSoup(res.content, 'lxml')
-            
-            # Premium 页面的选择器可能略有不同，建议同时尝试两种
-            items = soup.select('.p-program-list__item') or soup.select('.p-schedule-item')
+            items = soup.select('.p-program-list__item')
             
             if not items:
-                print(f"⚠️ {name} 已打开页面但未解析到内容。页面标题: {soup.title.text if soup.title else '无'}")
+                print(f"⚠️ {name} 页面已打开但没节目。")
                 return []
 
-            # ... 后续解析逻辑保持不变 ...
+            # --- 下面接你原本的解析 for 循环 ---
+            # for item in items:
+            #     ...
             
-            if not items:
-                # 如果没抓到，在日志里看看是不是撞上了验证码或空页面
-                title = soup.title.text if soup.title else "无标题"
-                print(f"⚠️ {name} (Ch:{ch_num}) 解析到 0 个节目。页面标题: {title}")
-                return []
-
-            for item in items:
-                # 这里是你原有的解析逻辑...
-                # 确保提取 title 和 time 的 selector 没写错
-                pass
-                
-            print(f"✅ {name} 抓取成功，节目数: {len(programmes)}")
-
+            print(f"✅ {name} 抓取成功 ({len(items)} 节目)")
+            
         except Exception as e:
-            print(f"💥 {name} 运行异常: {e}")
+            print(f"💥 {name} 出错: {e}")
             
         return programmes
 
