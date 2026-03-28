@@ -173,55 +173,89 @@ class SkyPerfectUltimate:
             return None, None
 
     def fetch_channel(self, ch_num, srv_ref, name):
-        # 路径识别：940以上进入成人路径
-        path_prefix = "adult/premium" if int(ch_num) >= 940 else "premium"
-        url = f"https://www.skyperfectv.co.jp/program/schedule/{path_prefix}/channel:{ch_num}/"
+        # 1. 定义尝试的路径优先级
+        # 针对 940 以上频道优先尝试 adult 路径
+        is_adult_hint = int(ch_num) >= 940
+        
+        paths = [
+            f"adult/premium/channel:{ch_num}/",
+            f"premium/channel:{ch_num}/",
+            f"program/schedule/index.php?p_ch={ch_num}" # 兜底的老接口
+        ]
+        
+        # 根据频道号调整优先级顺序
+        if not is_adult_hint:
+            paths = [paths[1], paths[0], paths[2]]
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+            "Referer": "https://www.skyperfectv.co.jp/"
+        }
         
         progs = []
-        try:
-            time.sleep(random.uniform(0.8, 1.5)) # 降低频率防止被封
-            res = self.session.get(url, headers=self.headers, timeout=25)
-            if res.status_code != 200:
-                print(f"❌ {name} 请求失败: {res.status_code}")
-                return []
+        for path in paths:
+            url = f"https://www.skyperfectv.co.jp/{path}" if "index.php" not in path else path
+            try:
+                time.sleep(random.uniform(1.0, 2.0))
+                res = self.session.get(url, headers=headers, timeout=20)
+                
+                if res.status_code == 404:
+                    continue # 尝试下一个路径
+                
+                if res.status_code != 200:
+                    print(f"❌ {name} ({ch_num}) 请求失败: {res.status_code}")
+                    return []
 
-            soup = BeautifulSoup(res.content, 'lxml')
-            items = soup.select('.p-program-list__item')
-            
-            if not items:
-                print(f"⚠️ {name} 页面已打开但未解析到节目块。")
-                return []
+                soup = BeautifulSoup(res.content, 'lxml')
+                
+                # 2. 兼容性选择器：尝试所有可能的节目块类名
+                items = soup.select('.p-program-list__item') or \
+                        soup.select('.p-schedule-item') or \
+                        soup.select('[class*="program-list__item"]')
+                
+                if not items:
+                    # 如果还是没找到，检查是否是因为页面改版
+                    continue 
 
-            for item in items:
-                # 提取日期 (通常在 data-date 属性中)
-                d_str = item.get('data-date') 
-                if not d_str: continue
+                for item in items:
+                    # 尝试从多个属性中提取日期
+                    d_str = item.get('data-date') or item.find_parent(attrs={"data-date": True})
+                    if not d_str:
+                        # 兜底：如果找不到 data-date，尝试从页面 header 提取当前日期
+                        d_str = datetime.datetime.now().strftime("%Y%m%d")
+                    
+                    # 兼容不同结构的标题和时间选择器
+                    title_node = item.select_one('.p-program-list__title') or \
+                                 item.select_one('.p-schedule-item__title')
+                    time_node = item.select_one('.p-program-list__time') or \
+                                item.select_one('.p-schedule-item__time')
+                    
+                    if not title_node or not time_node:
+                        continue
+                        
+                    title = title_node.get_text(strip=True)
+                    time_range = time_node.get_text(strip=True)
+                    
+                    start_xml, stop_xml = self.parse_japanese_time(d_str, time_range)
+                    
+                    if start_xml and stop_xml:
+                        progs.append({
+                            'ref': srv_ref,
+                            'title': title,
+                            'start': start_xml,
+                            'stop': stop_xml,
+                            'desc': title
+                        })
                 
-                # 提取标题和时间
-                title_node = item.select_one('.p-program-list__title')
-                time_node = item.select_one('.p-program-list__time')
-                
-                if not title_node or not time_node: continue
-                
-                title = title_node.get_text(strip=True)
-                time_range = time_node.get_text(strip=True) # "06:00～07:00"
-                
-                start_xml, stop_xml = self.parse_japanese_time(d_str, time_range)
-                
-                if start_xml and stop_xml:
-                    progs.append({
-                        'ref': srv_ref,
-                        'title': title,
-                        'start': start_xml,
-                        'stop': stop_xml,
-                        'desc': title # 聚合页暂用标题充当描述，如需详情需二次请求
-                    })
+                if progs:
+                    print(f"✅ {name} 抓取成功: {len(progs)} 条节目 (路径: {path})")
+                    return progs # 只要一个路径成功就返回
 
-            print(f"✅ {name} 抓取成功: {len(progs)} 条节目")
-        except Exception as e:
-            print(f"💥 {name} 运行异常: {e}")
-            
-        return progs
+            except Exception as e:
+                print(f"💥 {name} 在路径 {path} 下异常: {e}")
+        
+        print(f"⚠️ {name} ({ch_num}) 最终未能获取任何数据")
+        return []
 
     def run(self):
         all_results = []
