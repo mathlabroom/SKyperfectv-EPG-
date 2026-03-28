@@ -1,15 +1,14 @@
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
+import datetime
+from datetime import timedelta
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import random
 
-# --- 核心频道映射表 (部分展示，请按此格式填入你清单中的全部) ---
-# 格式: "网页Ch数字": ("Enigma2 ID", "频道名称")
+# 频道列表 (示例，请根据你的需求补充完整)
 CHANNELS_MAP = {
-
     "623": ("1:0:19:826F:3019:A:5000000:0:0:0:", "ＷＯＷＯＷシネマ"),
     "625": ("1:0:19:8271:4032:A:4D80000:0:0:0:", "BS10プレミアム"),
     "628": ("1:0:19:8274:3018:A:5000000:0:0:0:", "衛星劇場"),
@@ -136,87 +135,105 @@ CHANNELS_MAP = {
     "966": ("1:0:19:83C6:3026:A:5000000:0:0:0:", "Splash"),
     "967": ("1:0:19:83C7:3026:A:5000000:0:0:0:", "フラミンゴ"),
     "599": ("1:0:19:8257:4024:A:4D80000:0:0:0:", "スカパー！プロモ599"),
-
 }
 
 class SkyPerfectUltimate:
     def __init__(self):
-        self.base_url = "https://www.skyperfectv.co.jp"
         self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        })
-
-    def get_deep_info(self, detail_url):
-        """进入节目详情页抓取详细介绍和高清海报"""
-        try:
-            time.sleep(random.uniform(0.1, 0.3))
-            res = self.session.get(detail_url, timeout=10)
-            if res.status_code != 200: return "", ""
-            soup = BeautifulSoup(res.text, 'html.parser')
-            
-            # 抓取长文本描述
-            desc_node = soup.select_one('.p-program-detail__content')
-            desc = desc_node.get_text(separator="\n").strip() if desc_node else ""
-            
-            # 抓取海报
-            img_node = soup.select_one('.p-program-detail__figure img')
-            icon = ("https:" + img_node['src']) if img_node and img_node.get('src') else ""
-            return desc, icon
-        except:
-            return "", ""
-    def fetch_channel(self, ch_num, srv_ref, name, d_str):
-        # 核心逻辑：940 及以上的频道号需要插入 /adult/ 路径
-        path_prefix = "adult/premium" if int(ch_num) >= 940 else "premium"
-        
-        url = f"https://www.skyperfectv.co.jp/program/schedule/{path_prefix}/channel:{ch_num}/?date={d_str}"
-        
-        headers = {
+        self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
             "Referer": "https://www.skyperfectv.co.jp/"
         }
-        
-        programmes = []
+
+    def parse_japanese_time(self, date_str, time_range_str):
+        """
+        处理 30 小时制逻辑。
+        输入: date_str='20260328', time_range_str='26:00～27:30'
+        输出: 标准 XMLTV 时间格式
+        """
         try:
-            # 必须加一点延迟，防止请求过快被封
-            time.sleep(random.uniform(0.5, 1.0))
-            res = self.session.get(url, headers=headers, timeout=15)
+            start_t, end_t = time_range_str.split('～')
+            base_dt = datetime.datetime.strptime(date_str, "%Y%m%d")
             
+            def convert_hhmm(hhmm, current_date):
+                hh, mm = map(int, hhmm.split(':'))
+                days_to_add = hh // 24
+                actual_hh = hh % 24
+                return (current_date + timedelta(days=days_to_add)).replace(hour=actual_hh, minute=mm)
+
+            start_dt = convert_hhmm(start_t, base_dt)
+            end_dt = convert_hhmm(end_t, base_dt)
+            
+            # 如果结束时间早于开始时间，说明跨天
+            if end_dt <= start_dt:
+                end_dt += timedelta(days=1)
+                
+            return start_dt.strftime("%Y%m%d%H%M00 +0900"), end_dt.strftime("%Y%m%d%H%M00 +0900")
+        except:
+            return None, None
+
+    def fetch_channel(self, ch_num, srv_ref, name):
+        # 路径识别：940以上进入成人路径
+        path_prefix = "adult/premium" if int(ch_num) >= 940 else "premium"
+        url = f"https://www.skyperfectv.co.jp/program/schedule/{path_prefix}/channel:{ch_num}/"
+        
+        progs = []
+        try:
+            time.sleep(random.uniform(0.8, 1.5)) # 降低频率防止被封
+            res = self.session.get(url, headers=self.headers, timeout=25)
             if res.status_code != 200:
-                print(f"❌ {name} (Ch:{ch_num}) 请求失败: {res.status_code} URL: {url}")
+                print(f"❌ {name} 请求失败: {res.status_code}")
                 return []
 
             soup = BeautifulSoup(res.content, 'lxml')
             items = soup.select('.p-program-list__item')
             
             if not items:
-                print(f"⚠️ {name} 页面已打开但没节目。")
+                print(f"⚠️ {name} 页面已打开但未解析到节目块。")
                 return []
 
-            # --- 下面接你原本的解析 for 循环 ---
-            # for item in items:
-            #     ...
-            
-            print(f"✅ {name} 抓取成功 ({len(items)} 节目)")
-            
-        except Exception as e:
-            print(f"💥 {name} 出错: {e}")
-            
-        return programmes
+            for item in items:
+                # 提取日期 (通常在 data-date 属性中)
+                d_str = item.get('data-date') 
+                if not d_str: continue
+                
+                # 提取标题和时间
+                title_node = item.select_one('.p-program-list__title')
+                time_node = item.select_one('.p-program-list__time')
+                
+                if not title_node or not time_node: continue
+                
+                title = title_node.get_text(strip=True)
+                time_range = time_node.get_text(strip=True) # "06:00～07:00"
+                
+                start_xml, stop_xml = self.parse_japanese_time(d_str, time_range)
+                
+                if start_xml and stop_xml:
+                    progs.append({
+                        'ref': srv_ref,
+                        'title': title,
+                        'start': start_xml,
+                        'stop': stop_xml,
+                        'desc': title # 聚合页暂用标题充当描述，如需详情需二次请求
+                    })
 
-    def run(self, days=2):
-        all_results = []
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            tasks = []
-            for i in range(days):
-                d_str = (datetime.now() + timedelta(days=i)).strftime("%Y%m%d")
-                for ch_num, (srv_ref, name) in CHANNELS_MAP.items():
-                    tasks.append(executor.submit(self.fetch_channel, ch_num, srv_ref, name, d_str))
+            print(f"✅ {name} 抓取成功: {len(progs)} 条节目")
+        except Exception as e:
+            print(f"💥 {name} 运行异常: {e}")
             
+        return progs
+
+    def run(self):
+        all_results = []
+        # 聚合页信息量大，建议保持低并发
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            tasks = [executor.submit(self.fetch_channel, ch_num, srv_ref, name) 
+                     for ch_num, (srv_ref, name) in CHANNELS_MAP.items()]
+
             for f in as_completed(tasks):
                 all_results.extend(f.result())
 
-        # 生成 XMLTV 格式
+        # 生成 XMLTV
         root = ET.Element("tv")
         for ch_num, (srv_ref, name) in CHANNELS_MAP.items():
             chan = ET.SubElement(root, "channel", id=srv_ref)
@@ -225,14 +242,12 @@ class SkyPerfectUltimate:
         for p in all_results:
             prog = ET.SubElement(root, "programme", start=p['start'], stop=p['stop'], channel=p['ref'])
             ET.SubElement(prog, "title", lang="ja").text = p['title']
-            if p['desc']: ET.SubElement(prog, "desc", lang="ja").text = p['desc']
-            if p['icon']: ET.SubElement(prog, "icon", src=p['icon'])
+            ET.SubElement(prog, "desc", lang="ja").text = p['desc']
 
         tree = ET.ElementTree(root)
         ET.indent(tree, space="  ")
         tree.write("epg_ultimate.xml", encoding="utf-8", xml_declaration=True)
-        print(f"✅ 写入完成！总共抓取了 {len(all_results)} 条节目数据。")
-        print(f"🚀 任务完成！生成的 EPG 已保存至 epg_ultimate.xml")
+        print(f"\n🚀 任务完成！总计抓取 {len(all_results)} 条节目。")
 
 if __name__ == "__main__":
     SkyPerfectUltimate().run()
