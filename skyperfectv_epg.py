@@ -168,13 +168,22 @@ class SkyPerfectUltimate:
 
     def fetch_channel(self, ch_num, srv_ref, name, date_str):
         """抓取并修正30小时制时间逻辑"""
-        url = f"{self.base_url}/program/schedule/premium/channel:{ch_num}/?date={date_str}"
+        url = f"https://www.skyperfectv.co.jp/program/schedule/index.php?p_ch={ch_num}&p_date={date_str}"
         progs = []
         try:
             res = self.session.get(url, timeout=15)
             if res.status_code != 200: return []
-            soup = BeautifulSoup(res.text, 'html.parser')
+            # 建议使用 lxml 解析器（如果 yml 里装了的话），速度更快
+            soup = BeautifulSoup(res.text, 'html.parser') 
+            
+            # 确保选择器和官网 HTML 匹配
             items = soup.select('.p-program-list__item')
+            
+            # 增加一个简单的调试打印，让你在 Actions 日志里能看到进度
+            if items:
+                print(f"✅ {name} 抓取成功: {len(items)} 个节目")
+            else:
+                print(f"⚠️ {name} 未发现节目，请检查频道号 {ch_num}")
 
             for item in items:
                 t_node = item.select_one('.p-program-list__time')
