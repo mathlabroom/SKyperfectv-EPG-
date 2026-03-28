@@ -166,27 +166,35 @@ class SkyPerfectUltimate:
         except:
             return "", ""
     def fetch_channel(self, ch_num, srv_ref, name, d_str):
-        # 使用 index.php 接口最稳妥
-        url = f"https://www.skyperfectv.co.jp/program/schedule/index.php?p_ch={ch_num}&p_date={d_str}"
+        # 按照你提供的 Premium 地址格式进行拼接
+        # 注意：这里的 channel:{ch_num} 必须严格匹配
+        url = f"https://www.skyperfectv.co.jp/program/schedule/premium/channel:{ch_num}/?date={d_str}"
+        
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Accept-Language": "ja,en-US;q=0.9,en;q=0.8"
+            "Referer": "https://www.skyperfectv.co.jp/"
         }
         
         programmes = []
         try:
-            # 增加随机延迟，防止被封 IP
-            time.sleep(random.uniform(0.5, 1.5)) 
-            res = self.session.get(url, headers=headers, timeout=20)
+            # 增加一点延迟，Premium 页面对爬虫检测较严
+            time.sleep(random.uniform(0.5, 1.2))
+            res = self.session.get(url, headers=headers, timeout=15)
             
             if res.status_code != 200:
-                print(f"❌ {name} 请求失败: {res.status_code}")
+                print(f"❌ {name} (Ch:{ch_num}) 请求失败，状态码: {res.status_code}")
                 return []
 
-            soup = BeautifulSoup(res.content, 'lxml') # 建议改用 lxml
+            soup = BeautifulSoup(res.content, 'lxml')
             
-            # 兼容性选择器：尝试两种可能的类名
+            # Premium 页面的选择器可能略有不同，建议同时尝试两种
             items = soup.select('.p-program-list__item') or soup.select('.p-schedule-item')
+            
+            if not items:
+                print(f"⚠️ {name} 已打开页面但未解析到内容。页面标题: {soup.title.text if soup.title else '无'}")
+                return []
+
+            # ... 后续解析逻辑保持不变 ...
             
             if not items:
                 # 如果没抓到，在日志里看看是不是撞上了验证码或空页面
