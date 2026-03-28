@@ -233,8 +233,8 @@ class SkyPerfectUltimate:
         tree = ET.ElementTree(root)
         ET.indent(tree, space="  ")
         tree.write("epg_ultimate.xml", encoding="utf-8", xml_declaration=True)
-        print(f"\n🚀 任务完成！生成的 EPG 已保存至 epg_ultimate.xml")
+        print(f"✅ 写入完成！总共抓取了 {len(all_results)} 条节目数据。")
+        print(f"🚀 任务完成！生成的 EPG 已保存至 epg_ultimate.xml")
 
 if __name__ == "__main__":
     SkyPerfectUltimate().run()
-    print(f"写入完成！总共抓取了 {len(all_results)} 条节目。")
