@@ -237,3 +237,4 @@ class SkyPerfectUltimate:
 
 if __name__ == "__main__":
     SkyPerfectUltimate().run()
+    print(f"写入完成！总共抓取了 {len(all_results)} 条节目。")
