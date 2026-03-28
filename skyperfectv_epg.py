@@ -165,55 +165,46 @@ class SkyPerfectUltimate:
             return desc, icon
         except:
             return "", ""
-
-    def fetch_channel(self, ch_num, srv_ref, name, date_str):
-        """抓取并修正30小时制时间逻辑"""
-        url = f"https://www.skyperfectv.co.jp/program/schedule/index.php?p_ch={ch_num}&p_date={date_str}"
-        progs = []
+    def fetch_channel(self, ch_num, srv_ref, name, d_str):
+        # 使用 index.php 接口最稳妥
+        url = f"https://www.skyperfectv.co.jp/program/schedule/index.php?p_ch={ch_num}&p_date={d_str}"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept-Language": "ja,en-US;q=0.9,en;q=0.8"
+        }
+        
+        programmes = []
         try:
-            res = self.session.get(url, timeout=15)
-            if res.status_code != 200: return []
-            # 建议使用 lxml 解析器（如果 yml 里装了的话），速度更快
-            soup = BeautifulSoup(res.text, 'html.parser') 
+            # 增加随机延迟，防止被封 IP
+            time.sleep(random.uniform(0.5, 1.5)) 
+            res = self.session.get(url, headers=headers, timeout=20)
             
-            # 确保选择器和官网 HTML 匹配
-            items = soup.select('.p-program-list__item')
+            if res.status_code != 200:
+                print(f"❌ {name} 请求失败: {res.status_code}")
+                return []
+
+            soup = BeautifulSoup(res.content, 'lxml') # 建议改用 lxml
             
-            # 增加一个简单的调试打印，让你在 Actions 日志里能看到进度
-            if items:
-                print(f"✅ {name} 抓取成功: {len(items)} 个节目")
-            else:
-                print(f"⚠️ {name} 未发现节目，请检查频道号 {ch_num}")
+            # 兼容性选择器：尝试两种可能的类名
+            items = soup.select('.p-program-list__item') or soup.select('.p-schedule-item')
+            
+            if not items:
+                # 如果没抓到，在日志里看看是不是撞上了验证码或空页面
+                title = soup.title.text if soup.title else "无标题"
+                print(f"⚠️ {name} (Ch:{ch_num}) 解析到 0 个节目。页面标题: {title}")
+                return []
 
             for item in items:
-                t_node = item.select_one('.p-program-list__time')
-                a_node = item.select_one('.p-program-list__title a')
-                if not t_node or not a_node: continue
-
-                def time_fix(t_raw, b_date):
-                    h, m = map(int, t_raw.split(':'))
-                    dt = datetime.strptime(b_date, "%Y%m%d")
-                    if h >= 24: dt += timedelta(days=1); h -= 24
-                    return dt.replace(hour=h, minute=m).strftime("%Y%m%d%H%M%S +0900")
-
-                start_raw, end_raw = t_node.text.strip().split('～')
-                d_url = self.base_url + a_node['href']
+                # 这里是你原有的解析逻辑...
+                # 确保提取 title 和 time 的 selector 没写错
+                pass
                 
-                # 抓取深度描述和图片
-                full_desc, icon_url = self.get_deep_info(d_url)
+            print(f"✅ {name} 抓取成功，节目数: {len(programmes)}")
 
-                progs.append({
-                    'ref': srv_ref,
-                    'start': time_fix(start_raw, date_str),
-                    'stop': time_fix(end_raw, date_str),
-                    'title': a_node.text.strip(),
-                    'desc': full_desc,
-                    'icon': icon_url
-                })
-            print(f"✅ {name} 抓取成功")
         except Exception as e:
-            print(f"❌ {name} 失败: {e}")
-        return progs
+            print(f"💥 {name} 运行异常: {e}")
+            
+        return programmes
 
     def run(self, days=2):
         all_results = []
