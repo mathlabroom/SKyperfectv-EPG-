@@ -10,6 +10,7 @@ import random
 import re
 import gzip
 import shutil
+import os
 
 # 频道配置 (请根据需要继续添加)
 CHANNELS_MAP = {
@@ -306,22 +307,19 @@ class SkyPerfectUltimate:
         ET.indent(tree, space="  ")
         tree.write("epg_ultimate.xml", encoding="utf-8", xml_declaration=True)
         print(f"\n🚀 任务结束！共计生成 {len(all_results)} 条带描述的节目数据。")
+            # ... 原有的抓取和生成 XML 代码 ...
+        xml_file = "epg_ultimate.xml"
+        gz_file = "epg_ultimate.xml.gz"
+
+        # 保存原始 XML
+        tree = ET.ElementTree(root)
+        ET.indent(tree, space="  ")
+        tree.write(xml_file, encoding="utf-8", xml_declaration=True)
+
+        # 生成 .gz 压缩包
+        with open(xml_file, 'rb') as f_in:
+            with gzip.open(gz_file, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
 
 if __name__ == "__main__":
     SkyPerfectUltimate().run()
-    def run(self):
-    # ... 原有的抓取和生成 XML 代码 ...
-    xml_file = "epg_ultimate.xml"
-    gz_file = "epg_ultimate.xml.gz"
-    
-    # 1. 先生成普通的 XML
-    tree = ET.ElementTree(root)
-    ET.indent(tree, space="  ")
-    tree.write(xml_file, encoding="utf-8", xml_declaration=True)
-    
-    # 2. 增加：将 XML 压缩成 GZ
-    with open(xml_file, 'rb') as f_in:
-        with gzip.open(gz_file, 'wb') as f_out:
-            shutil.copyfileobj(f_in, f_out)
-            
-    print(f"🚀 GZ 压缩完成！已生成 {gz_file}")
