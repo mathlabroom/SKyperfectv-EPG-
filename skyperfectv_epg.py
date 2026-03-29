@@ -8,6 +8,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import random
 import re
+import gzip
+import shutil
 
 # 频道配置 (请根据需要继续添加)
 CHANNELS_MAP = {
@@ -307,3 +309,19 @@ class SkyPerfectUltimate:
 
 if __name__ == "__main__":
     SkyPerfectUltimate().run()
+    def run(self):
+    # ... 原有的抓取和生成 XML 代码 ...
+    xml_file = "epg_ultimate.xml"
+    gz_file = "epg_ultimate.xml.gz"
+    
+    # 1. 先生成普通的 XML
+    tree = ET.ElementTree(root)
+    ET.indent(tree, space="  ")
+    tree.write(xml_file, encoding="utf-8", xml_declaration=True)
+    
+    # 2. 增加：将 XML 压缩成 GZ
+    with open(xml_file, 'rb') as f_in:
+        with gzip.open(gz_file, 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+            
+    print(f"🚀 GZ 压缩完成！已生成 {gz_file}")
