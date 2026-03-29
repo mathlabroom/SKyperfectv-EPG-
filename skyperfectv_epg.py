@@ -10,9 +10,6 @@ import re
 
 # 频道配置 (请根据需要继续添加)
 CHANNELS_MAP = {
-    "623": ("1:0:19:826F:3019:A:5000000:0:0:0:", "ＷＯＷＯＷシネマ"),
-    "625": ("1:0:19:8271:4032:A:4D80000:0:0:0:", "BS10プレミアム"),
-    "628": ("1:0:19:8274:3018:A:5000000:0:0:0:", "衛星劇場"),
     "965": ("1:0:19:83C5:3026:A:5000000:0:0:0:", "红樱桃"),
     "967": ("1:0:19:83C7:3026:A:5000000:0:0:0:", "フラミンゴ"),
 }
@@ -21,15 +18,14 @@ class SkyPerfectUltimate:
     def __init__(self):
         self.session = requests.Session()
         self.base_url = "https://www.skyperfectv.co.jp"
+        
+        # 【关键：替换为你刚才复制的那一长串 Cookie】
+        self.raw_cookie = "_gcl_au=1.1.1303938502.1770984647; _ga=GA1.1.2010907203.1770984648; _ebtd=2.28sjd120fru.1770984649; _yjsu_yjad=1770984648.2588395d-c1c3-4cdc-8f3f-c236ab421cf4; __lt__cid=47d05e67-f596-4985-b7d9-aab748ab7518; skyperfectv.timetech_user_id=si2yr85hmlkuj9zu; _tt_enable_cookie=1; _ttp=01KHBEJDXWWSKGVD003V1EWSF3_.tt.2; __ulfpc=202602132014353884; PHPSESSID=jhqtqool8oqqq5135ubof6dsra; login=0; __lt__sid=444648a8-ad668f82; cto_bundle=57h-YF9LN1ROYXNiMGZIWnNFbm9wT2MlMkJQUEFjV0dVV3hSMFptSXVWSVdkN3pOem5BJTJCMEhYT200VUpHdE5KNkFERUN3VFYxYUxsYjEzMXVlQzRBaXMlMkY0elQlMkYyTU1zcUV3QUY1NjlzT005NzM0elpMSVVsT1J1UXk0SEgxJTJCak1SOSUyRjQxWEROczY0dUZZJTJGV0FsZnFIUiUyQnNTc0JFTUNJJTJCanBmUm5Fd0gxMDBVVyUyQjJ1Qk5tNERmR1h5OFhxYXQ0WFlkZSUyQnhS; adult_auth=true; adlpo=PC#1770984649566-136656-543370#1782550197|check#true#1774774257; _uetsid=d56224e02b4611f1a90a1da3db2873d9; _uetvid=08f8653008d511f1a48d01bb403063a4; __rtbh.lid=%7B%22eventType%22%3A%22lid%22%2C%22id%22%3A%22aaQzn5Gr2U1mwUgX5E2s%22%2C%22expiryDate%22%3A%222027-03-29T08%3A49%3A56.636Z%22%7D; __rtbh.uid=%7B%22eventType%22%3A%22uid%22%2C%22id%22%3A%22unknown%22%2C%22expiryDate%22%3A%222027-03-29T08%3A49%3A56.637Z%22%7D; ttcsid_CKOUVPRC77U5FRI5MHNG=1774771859661::pU-QQxZ8IopDn6D_XtWR.13.1774774196933.1; ttcsid_CMFRQ03C77U58IR17CJ0=1774771859662::k_LAnjujBwkGE1NdkPGS.13.1774774196933.1; skyperfectv.page_view=10; ttcsid=1774771859662::_WTWNRItdJUlIno140-7.13.1774774196933.0::1.2335819.2337055::2325078.2.923.504::3127869.18.0; _dd_s=logs=1&id=426e1c8b-e2b9-4515-ae1f-2b792ad92df2&created=1774774064533&expire=1774776073440; _ga_WWBP9C5VMM=GS2.1.s1774771855$o14$g1$t1774775179$j60$l0$h140969438"
+
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        }
-        # 预设年龄认证 Cookie
-        self.auth_cookies = {
-            'isAdult': '1',
-            'age_check': '1',
-            'skp_adult_view': '1',
-            'ST_ADULT_FLG': '1'
+            "Cookie": self.raw_cookie, # 直接把整串 Cookie 塞进 Header
+            "Referer": "https://www.skyperfectv.co.jp/"
         }
 
     def parse_japanese_time(self, date_raw, time_range_str):
@@ -126,13 +122,17 @@ class SkyPerfectUltimate:
         channel_url = f"{self.base_url}/program/schedule/premium/channel:{ch_num}/"
         progs = []
         try:
-            res = self.session.get(channel_url, headers=self.headers, cookies=self.auth_cookies, timeout=20)
+            # 使用 self.headers 里的全量 Cookie 访问
+            res = self.session.get(channel_url, headers=self.headers, timeout=20)
             
-            # 针对成人频道的年龄门槛处理
+            # 调试：如果在 Actions 日志里看到这个，说明 Cookie 填错了或者过期了
             if "年齢確認" in res.text:
-                gate_url = f"{self.base_url}/program/schedule/adult/gate.php?url={channel_url}"
-                self.session.get(gate_url, headers=self.headers, cookies=self.auth_cookies, timeout=10)
-                res = self.session.get(channel_url, headers=self.headers, cookies=self.auth_cookies, timeout=20)
+                print(f"❌ {name} 依然被拦截，请检查 Cookie 字符串是否包含 PHPSESSID 等关键信息")
+                return []
+
+            soup = BeautifulSoup(res.text, 'html.parser')
+            # 这里的链接提取逻辑保持不变
+            links = soup.find_all('a', href=re.compile(r'/program/detail/'))
 
             soup = BeautifulSoup(res.text, 'html.parser')
             # 提取所有 uid 详情链接并去重
