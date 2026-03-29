@@ -166,38 +166,43 @@ class SkyPerfectUltimate:
 
     def fetch_detail(self, url, srv_ref, referer):
         try:
-            headers = {"Referer": referer}
-            # 随机小延时防止被封
-            time.sleep(random.uniform(0.05, 0.15))
-            res = self.session.get(url, headers=headers, timeout=10)
+            # 优化点 1：只请求必要头部，减少包体长度
+            res = self.session.get(url, headers={"Referer": referer}, timeout=8)
             if res.status_code != 200: return None
             
-            # 使用 lxml 解析，速度大幅提升
-            dsoup = BeautifulSoup(res.text, 'lxml')
-            title_node = dsoup.select_one('.p-headline__ttl') or dsoup.select_one('h1')
-            time_node = dsoup.select_one('.p-headline__info__time')
-            if not title_node or not time_node: return None
+            html = res.text
             
-            desc_parts = []
-            short_node = dsoup.select_one('.p-info__detail p')
-            if short_node: desc_parts.append(short_node.get_text(strip=True).replace('　もっと見る', ''))
-            long_node = dsoup.select_one('.p-info__cast p')
-            if long_node: desc_parts.append("【内容】" + long_node.get_text(strip=True))
+            # 优化点 2：使用正则替代 BeautifulSoup (针对详情页这种结构固定的页面)
+            # 正则提取比解析整个 DOM 树快得多
+            title_match = re.search(r'<h1 class="p-headline__ttl">(.+?)</h1>', html)
+            if not title_match:
+                title_match = re.search(r'<meta property="og:title" content="(.+?)">', html)
             
-            raw_time = time_node.get_text(strip=True)
-            date_node = dsoup.select_one('.p-program-detail__date')
-            date_str = date_node.get_text(strip=True) if date_node else raw_time
-            time_match = re.search(r'(\d{2}:\d{2}～\d{2}:\d{2})', raw_time)
-            if not time_match: return None
+            desc_match = re.search(r'<meta name="description" content="(.+?)">', html)
+            time_match = re.search(r'(\d{2}:\d{2}～\d{2}:\d{2})', html)
+            
+            if not title_match or not time_match: return None
+
+            # 提取描述（优先取 meta 里的简介，速度最快）
+            title = title_match.group(1).strip()
+            desc = desc_match.group(1).strip() if desc_match else title
+            
+            # 日期处理逻辑保持你的 parse_japanese_time 不变
+            date_match = re.search(r'(\d{1,2}/\d{1,2})\(.+?\)', html)
+            date_str = date_match.group(1) if date_match else ""
             
             start_xml, stop_xml = self.parse_japanese_time(date_str, time_match.group(1))
+            
             if start_xml and stop_xml:
                 return {
-                    'ref': srv_ref, 'title': title_node.get_text(strip=True),
-                    'desc': "\n\n".join(desc_parts) if desc_parts else title_node.get_text(strip=True),
-                    'start': start_xml, 'stop': stop_xml
+                    'ref': srv_ref,
+                    'title': title,
+                    'desc': desc,
+                    'start': start_xml,
+                    'stop': stop_xml
                 }
-        except: return None
+        except:
+            return None
 
     def fetch_channel(self, ch_num, srv_ref, name):
         channel_url = f"{self.base_url}/program/schedule/premium/channel:{ch_num}/"
