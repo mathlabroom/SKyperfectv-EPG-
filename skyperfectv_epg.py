@@ -279,9 +279,9 @@ class SkyPerfectUltimate:
                     result = f.result()
                     if result: progs.append(result)
             
-            print(f"✅ {name} ({ch_num}) 抓取完成: {len(progs)} 条")
+            print(f"✅ {name} ({ch_num}) 抓取完成: {len(progs)} 条",flush=True)
         except Exception as e:
-            print(f"💥 {name} 异常: {e}")
+            print(f"💥 {name} 异常: {e}",flush=True)
         return progs
 
     def run(self):
@@ -315,14 +315,14 @@ class SkyPerfectUltimate:
         tree = ET.ElementTree(root)
         ET.indent(tree, space="  ")
         tree.write(xml_file, encoding="utf-8", xml_declaration=True)
-        print(f"✅ XML 生成完成: {xml_file}")
+        print(f"✅ XML 生成完成: {xml_file}",flush=True)
 
         # 生成 .gz 压缩包 [cite: 68]
         with open(xml_file, 'rb') as f_in:
             with gzip.open(gz_file, 'wb') as f_out:
                 shutil.copyfileobj(f_in, f_out)
         
-        print(f"🚀 任务结束！共计生成 {len(all_results)} 条带描述的节目数据。")
+        print(f"🚀 任务结束！共计生成 {len(all_results)} 条带描述的节目数据。",flush=True)
         print(f"📦 已打包压缩为: {gz_file}")
 
 if __name__ == "__main__":
