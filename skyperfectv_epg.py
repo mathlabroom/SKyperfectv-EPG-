@@ -35,42 +35,53 @@ class SkyPerfectUltimate:
 
     def parse_japanese_time(self, date_raw, time_range_str):
         """
-        利用 datetime 运算解决月末跨月、跨年及 30 小时制问题
+        智能解析：自动处理跨月、跨年、30小时制及月末逻辑
         """
         try:
-            # 提取月/日 (支持 03/31 或 2026/03/31)
+            # 1. 统一提取月和日 (不管前面有没有年份)
             date_match = re.search(r'(\d{1,2})/(\d{1,2})', date_raw)
             if not date_match: return None, None
             
             month, day = int(date_match.group(1)), int(date_match.group(2))
             
-            # 确定年份 (处理 12 月跨 1 月的情况)
+            # 2. 确定年份逻辑
             now = datetime.datetime.now()
             year = now.year
-            if month == 1 and now.month == 12:
+            # 如果当前是12月，抓到的是1月的节目，说明跨年了
+            if now.month == 12 and month == 1:
                 year += 1
+            # 如果当前是1月，抓到的是12月的节目（回溯抓取），说明是去年的
+            elif now.month == 1 and month == 12:
+                year -= 1
             
-            # 建立基准时间 (该日凌晨 00:00)
+            # 3. 建立该日凌晨 00:00 的基准对象
+            # datetime 内部会自动校验日期合法性，如果是 2月30日会报错，进入 except
             base_dt = datetime.datetime(year, month, day)
             
-            # 解析时间范围 (如 26:00～28:30)
-            start_t, end_t = time_range_str.split('～')
+            # 4. 提取时间点 (兼容 ～ 或 - 或 〜)
+            time_parts = re.findall(r'(\d{1,2}:\d{2})', time_range_str)
+            if len(time_parts) < 2: return None, None
+            start_t, end_t = time_parts[0], time_parts[1]
             
             def get_actual_dt(hhmm, ref_date):
                 hh, mm = map(int, hhmm.split(':'))
-                # 利用 timedelta 自动处理进位 (如 3月31日 + 26小时 = 4月1日 02:00)
+                # 核心：使用 timedelta。如果 hh=26, ref_date 是 31号，
+                # 它会自动指向下个月的 1号 02:00，不需要手动判断大月小月。
                 return ref_date + timedelta(hours=hh, minutes=mm)
 
             start_dt = get_actual_dt(start_t, base_dt)
             end_dt = get_actual_dt(end_t, base_dt)
             
-            # 如果结束时间数值上小于开始时间 (如 23:00～01:00)，手动加一天
+            # 5. 处理结束时间在数值上小于开始时间的情况 (如 23:00 ～ 01:00)
+            # 这种情况通常发生在非30小时制表示法中
             if end_dt <= start_dt:
                 end_dt += timedelta(days=1)
                 
+            # 返回符合 XMLTV 标准的格式
             return (start_dt.strftime("%Y%m%d%H%M00 +0900"), 
                     end_dt.strftime("%Y%m%d%H%M00 +0900"))
-        except:
+        except Exception as e:
+            # print(f"日期转换失败: {date_raw} {time_range_str} -> {e}")
             return None, None
 
     def fetch_detail(self, url, srv_ref, referer):
