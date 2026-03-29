@@ -286,40 +286,44 @@ class SkyPerfectUltimate:
 
     def run(self):
         all_results = []
+        # 1. 多线程抓取所有频道数据
         with ThreadPoolExecutor(max_workers=3) as executor:
             tasks = [executor.submit(self.fetch_channel, ch_num, srv_ref, name) 
-                     for ch_num, (srv_ref, name) in CHANNELS_MAP.items()]
+                   for ch_num, (srv_ref, name) in CHANNELS_MAP.items()]
             for f in as_completed(tasks):
                 all_results.extend(f.result())
 
-        # 构建 XMLTV
+        # 2. 构建 XML 树结构 [cite: 65]
         root = ET.Element("tv", {"generator-info-name": "SkyPerfectUltimate"})
+        
+        # 写入频道信息 [cite: 66]
         for ch_num, (srv_ref, name) in CHANNELS_MAP.items():
             chan = ET.SubElement(root, "channel", id=srv_ref)
             ET.SubElement(chan, "display-name").text = name
 
+        # 写入节目信息 [cite: 66]
         for p in all_results:
             prog = ET.SubElement(root, "programme", start=p['start'], stop=p['stop'], channel=p['ref'])
             ET.SubElement(prog, "title", lang="ja").text = p['title']
             ET.SubElement(prog, "desc", lang="ja").text = p['desc']
 
-        tree = ET.ElementTree(root)
-        ET.indent(tree, space="  ")
-        tree.write("epg_ultimate.xml", encoding="utf-8", xml_declaration=True)
-        print(f"\n🚀 任务结束！共计生成 {len(all_results)} 条带描述的节目数据。")
-            # ... 原有的抓取和生成 XML 代码 ...
+        # 3. 文件保存与压缩逻辑 [cite: 68]
         xml_file = "epg_ultimate.xml"
         gz_file = "epg_ultimate.xml.gz"
 
-        # 保存原始 XML
+        # 保存原始 XML 文件
         tree = ET.ElementTree(root)
         ET.indent(tree, space="  ")
         tree.write(xml_file, encoding="utf-8", xml_declaration=True)
+        print(f"✅ XML 生成完成: {xml_file}")
 
-        # 生成 .gz 压缩包
+        # 生成 .gz 压缩包 [cite: 68]
         with open(xml_file, 'rb') as f_in:
             with gzip.open(gz_file, 'wb') as f_out:
                 shutil.copyfileobj(f_in, f_out)
+        
+        print(f"🚀 任务结束！共计生成 {len(all_results)} 条带描述的节目数据。")
+        print(f"📦 已打包压缩为: {gz_file}")
 
 if __name__ == "__main__":
     SkyPerfectUltimate().run()
