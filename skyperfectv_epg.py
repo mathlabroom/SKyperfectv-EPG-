@@ -243,7 +243,7 @@ class SkyPerfectUltimate:
             unique_hrefs = list(set([l.get('href') for l in links if l.get('href')]))
             
             # 详情页并发数可稍高
-            with ThreadPoolExecutor(max_workers=15) as detail_executor:
+            with ThreadPoolExecutor(max_workers=25) as detail_executor:
                 futures = [detail_executor.submit(self.fetch_detail, self.base_url + h, srv_ref, channel_url) for h in unique_hrefs]
                 for f in as_completed(futures):
                     result = f.result()
