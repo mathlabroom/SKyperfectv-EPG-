@@ -1,4 +1,3 @@
-
 import requests
 from bs4 import BeautifulSoup
 import datetime
@@ -9,16 +8,15 @@ import time
 import random
 import re
 import gzip
-import shutil
 import os
 
-# 频道配置 (请根据需要继续添加)
+# 频道配置保持不变
 CHANNELS_MAP = {
     "623": ("1:0:19:826F:3019:A:5000000:0:0:0:", "ＷＯＷＯＷシネマ"),
     "625": ("1:0:19:8271:4032:A:4D80000:0:0:0:", "BS10プレミアム"),
     "628": ("1:0:19:8274:3018:A:5000000:0:0:0:", "衛星劇場"),
     "629": ("1:0:19:8275:4031:A:4D80000:0:0:0:", "東映チャンネル"),
-    "630": ("1:0:19:8276:3020:A:5000000:0:0:0:", "ＷＯＷＯＷプラス 映画・ドラマ・スポーツ・音楽"),
+    "630": ("1:0:19:8276:3020:A:5000000:0:0:0:", "ＷＯＷＯＷプラス 映画・ドラマ・スポーツ・音乐"),
     "631": ("1:0:19:8277:3014:A:5000000:0:0:0:", "ザ・シネマ"),
     "632": ("1:0:19:8278:3026:A:5000000:0:0:0:", "ムービープラス"),
     "633": ("1:0:19:8279:3014:A:5000000:0:0:0:", "映画・チャンネルNECO"),
@@ -51,20 +49,20 @@ CHANNELS_MAP = {
     "613": ("1:0:19:8265:4031:A:4D80000:0:0:0:", "フジテレビＮＥＸＴ ライブ・プレミアム"),
     "614": ("1:0:19:8265:4031:A:4D80000:0:0:0:", "フジテレビＯＮＥ スポーツ・バラエティ"),
     "615": ("1:0:19:8267:4031:A:4D80000:0:0:0:", "フジテレビＴＷＯ ドラマ・アニメ"),
-    "616": ("1:0:19:8268:3019:A:5000000:0:0:0:", "ＴＢＳチャンネル１ 最新ドラマ・音楽・映画"),
+    "616": ("1:0:19:8268:3019:A:5000000:0:0:0:", "ＴＢＳチャンネル１ 最新ドラマ・音乐・映画"),
     "617": ("1:0:19:8269:4023:A:4D80000:0:0:0:", "ＴＢＳチャンネル２ 名作ドラマ・スポーツ・アニメ"),
     "618": ("1:0:19:826A:4031:A:4D80000:0:0:0:", "エンタメ～テレ☆シネドラバラエティ"),
-    "619": ("1:0:19:826B:4024:A:4D80000:0:0:0:", "日テレプラス ドラマ・アニメ・音楽ライブ"),
+    "619": ("1:0:19:826B:4024:A:4D80000:0:0:0:", "日テレプラス ドラマ・アニメ・音乐ライブ"),
     "620": ("1:0:19:826C:4024:A:4D80000:0:0:0:", "ディズニー･チャンネル"),
     "621": ("1:0:19:826D:3019:A:5000000:0:0:0:", "ＷＯＷＯＷプライム"),
     "622": ("1:0:19:826E:3017:A:5000000:0:0:0:", "ＷＯＷＯＷライブ"),
-    "664": ("1:0:19:8298:4029:A:4D80000:0:0:0:", "チャンネル銀河 歴史ドラマ・サスペンス・日本のうた"),
+    "664": ("1:0:19:8298:4029:A:4D80000:0:0:0:", "チャンネル银河 历史ドラマ・サスペンス・日本のうた"),
     "638": ("1:0:19:827E:3017:A:5000000:0:0:0:", "ミュージック・エア"),
     "639": ("1:0:19:827F:3026:A:5000000:0:0:0:", "ミュージック・ジャパンTV"),
     "640": ("1:0:19:8280:3028:A:5000000:0:0:0:", "MTV"),
     "641": ("1:0:19:8281:3014:A:5000000:0:0:0:", "MUSIC ON! TV（エムオン!）"),
-    "642": ("1:0:19:8282:3020:A:5000000:0:0:0:", "音楽・ライブ！ スペースシャワーＴＶ"),
-    "644": ("1:0:19:8284:3019:A:5000000:0:0:0:", "歌謡ポップスチャンネル"),
+    "642": ("1:0:19:8282:3020:A:5000000:0:0:0:", "音乐・ライブ！ スペースシャワーＴＶ"),
+    "644": ("1:0:19:8284:3019:A:5000000:0:0:0:", "歌谣ポップスチャンネル"),
     "645": ("1:0:19:8285:3017:A:5000000:0:0:0:", "ミュージック・グラフィティＴＶ"),
     "647": ("1:0:19:8287:3014:A:5000000:0:0:0:", "スーパー！ドラマＴＶ #海外ドラマ☆エンタメ"),
     "649": ("1:0:19:8289:4023:A:4D80000:0:0:0:", "ミステリーチャンネル"),
@@ -72,20 +70,20 @@ CHANNELS_MAP = {
     "651": ("1:0:19:828B:4023:A:4D80000:0:0:0:", "Dlife（ディーライフ）"),
     "654": ("1:0:19:828E:3026:A:5000000:0:0:0:", "女性チャンネル♪LaLa TV"),
     "655": ("1:0:19:828F:4032:A:4D80000:0:0:0:", "アジアドラマチックTV（アジドラ）"),
-    "656": ("1:0:19:8290:4029:A:4D80000:0:0:0:", "KBS World 韓流専門チャンネル"),
+    "656": ("1:0:19:8290:4029:A:4D80000:0:0:0:", "KBS World 韩流専门チャンネル"),
     "657": ("1:0:19:8291:3020:A:5000000:0:0:0:", "ＫＮＴＶ"),
     "658": ("1:0:19:8292:4028:A:4D80000:0:0:0:", "Ｍｎｅｔ"),
     "535": ("1:0:19:8217:4024:A:4D80000:0:0:0:", "大人のイキヌキ！ヌーヴェルパラダイス"),
     "659": ("1:0:19:8293:3020:A:5000000:0:0:0:", "MONDO TV"),
-    "660": ("1:0:19:8294:3014:A:5000000:0:0:0:", "ファミリー劇場"),
-    "661": ("1:0:19:8295:3018:A:5000000:0:0:0:", "ホームドラマチャンネル 韓流・時代劇・国内ドラマ"),
-    "662": ("1:0:19:8296:4031:A:4D80000:0:0:0:", "時代劇専門チャンネル"),
-    "663": ("1:0:19:8297:3018:A:5000000:0:0:0:", "アイドル専門チャンネルＰｉｇｏｏ"),
+    "660": ("1:0:19:8294:3014:A:5000000:0:0:0:", "ファミリー剧场"),
+    "661": ("1:0:19:8295:3018:A:5000000:0:0:0:", "ホームドラマチャンネル 韩流・时代剧・国内ドラマ"),
+    "662": ("1:0:19:8296:4031:A:4D80000:0:0:0:", "时代剧専门チャンネル"),
+    "663": ("1:0:19:8297:3018:A:5000000:0:0:0:", "アイドル専门チャンネルＰｉｇｏｏ"),
     "667": ("1:0:19:829B:3027:A:5000000:0:0:0:", "アニメシアターX(AT-X)"),
     "668": ("1:0:19:829C:3027:A:5000000:0:0:0:", "カートゥーン ネットワーク 海外アニメ国内アニメ"),
-    "669": ("1:0:19:829D:3027:A:5000000:0:0:0:", "キッズステーション テレビアニメ･劇場版･ＯＶＡ"),
+    "669": ("1:0:19:829D:3027:A:5000000:0:0:0:", "キッズステーション テレビアニメ･剧场版･ＯＶＡ"),
     "670": ("1:0:19:829E:4031:A:4D80000:0:0:0:", "アニマックス"),
-    "674": ("1:0:19:82A2:3014:A:5000000:0:0:0:", "ヒストリーチャンネル 日本・世界の歴史＆エンタメ"),
+    "674": ("1:0:19:82A2:3014:A:5000000:0:0:0:", "ヒストリーチャンネル 日本・世界の历史＆エンタメ"),
     "675": ("1:0:19:82A3:4031:A:4D80000:0:0:0:", "ナショナル ジオグラフィック"),
     "676": ("1:0:19:82A4:3026:A:5000000:0:0:0:", "ディスカバリーチャンネル"),
     "677": ("1:0:19:82A5:4032:A:4D80000:0:0:0:", "アニマルプラネット"),
@@ -100,13 +98,13 @@ CHANNELS_MAP = {
     "529": ("1:0:19:8211:3017:A:5000000:0:0:0:", "ベターライフチャンネル"),
     "536": ("1:0:19:8218:4032:A:4D80000:0:0:0:", "パチンコ★パチスロＴＶ！"),
     "537": ("1:0:19:8219:4028:A:4D80000:0:0:0:", "パチ・スロ サイトセブンＴＶ"),
-    "540": ("1:0:19:821C:4023:A:4D80000:0:0:0:", "釣りビジョンＨＤ"),
+    "540": ("1:0:19:821C:4023:A:4D80000:0:0:0:", "钓りビジョンＨＤ"),
     "542": ("1:0:19:821E:3019:A:5000000:0:0:0:", "寄席チャンネル"),
     "544": ("1:0:19:8220:3019:A:5000000:0:0:0:", "旅チャンネル"),
-    "546": ("1:0:19:8222:4029:A:4D80000:0:0:0:", "鉄道チャンネル"),
+    "546": ("1:0:19:8222:4029:A:4D80000:0:0:0:", "铁道チャンネル"),
     "521": ("1:0:19:8209:4032:A:4D80000:0:0:0:", "囲碁・将棋チャンネル"),
     "672": ("1:0:19:82A0:4024:A:4D80000:0:0:0:", "ディズニージュニア"),
-    "678": ("1:0:19:82A6:3017:A:5000000:0:0:0:", "南関東地方競馬チャンネル"),
+    "678": ("1:0:19:82A6:3017:A:5000000:0:0:0:", "南関东地方竞马チャンネル"),
     "680": ("1:0:19:82A8:4031:A:4D80000:0:0:0:", "ＪＬＣ６８０"),
     "681": ("1:0:19:82A9:4023:A:4D80000:0:0:0:", "ＪＬＣ６８１"),
     "682": ("1:0:19:82AA:4029:A:4D80000:0:0:0:", "ＪＬＣ６８２"),
@@ -114,216 +112,152 @@ CHANNELS_MAP = {
     "684": ("1:0:19:82AC:4023:A:4D80000:0:0:0:", "ＪＬＣ６８４"),
     "688": ("1:0:19:82B0:3027:A:5000000:0:0:0:", "グリーンチャンネル"),
     "689": ("1:0:19:82B1:3027:A:5000000:0:0:0:", "グリーンチャンネル２"),
-    "690": ("1:0:19:82B2:4028:A:4D80000:0:0:0:", "ＳＰＥＥＤチャンネル（競輪ライブ） ６９０"),
-    "696": ("1:0:19:82B8:3018:A:5000000:0:0:0:", "ＳＰＥＥＤチャンネル（競輪ライブ） ６９6"),
-    "701": ("1:0:19:82BD:3027:A:5000000:0:0:0:", "地方競馬ナイン ７０１"),
-    "702": ("1:0:19:82BE:3019:A:5000000:0:0:0:", "地方競馬ナイン ７０２"),
-    "703": ("1:0:19:82BF:3017:A:5000000:0:0:0:", "地方競馬ナイン ７０３"),
-    "518": ("1:0:19:8206:4028:A:4D80000:0:0:0:", "フェニックステレビ（鳳凰衛視）"),
+    "690": ("1:0:19:82B2:4028:A:4D80000:0:0:0:", "ＳＰＥＥＤチャンネル（竞轮ライブ） ６９０"),
+    "696": ("1:0:19:82B8:3018:A:5000000:0:0:0:", "ＳＰＥＥＤチャンネル（竞轮ライブ） ６９6"),
+    "701": ("1:0:19:82BD:3027:A:5000000:0:0:0:", "地方竞马ナイン ７０１"),
+    "702": ("1:0:19:82BE:3019:A:5000000:0:0:0:", "地方竞马ナイン ７０２"),
+    "703": ("1:0:19:82BF:3017:A:5000000:0:0:0:", "地方竞马ナイン ７０３"),
+    "518": ("1:0:19:8206:4028:A:4D80000:0:0:0:", "フェニックステレビ（凤凰卫视）"),
     "523": ("1:0:19:820B:4029:A:4D80000:0:0:0:", "ショップチャンネル"),
     "525": ("1:0:19:820D:4029:A:4D80000:0:0:0:", "ＱＶＣ（キューヴィーシー）"),
     "527": ("1:0:19:820F:4029:A:4D80000:0:0:0:", "ジュエリー☆ＧＳＴＶ"),
     "528": ("1:0:19:8210:3017:A:5000000:0:0:0:", "セレクトショッピング"),
-    #"942": ("1:0:19:83AE:3028:A:5000000:0:0:0:", "ｋｍｐチャンネル"),
-    #"943": ("1:0:19:83AF:3014:A:5000000:0:0:0:", "プレイボーイ チャンネル"),
-    #"944": ("1:0:19:83B0:3028:A:5000000:0:0:0:", "レインボーチャンネル"),
-    #"945": ("1:0:19:83B1:3026:A:5000000:0:0:0:", "ミッドナイト・ブルー"),
-    #"946": ("1:0:19:83B2:3028:A:5000000:0:0:0:", "パラダイステレビ"),
-    #"947": ("1:0:19:83B3:3026:A:5000000:0:0:0:", "チェリーボム"),
-    #"957": ("1:0:19:83B3:3026:A:5000000:0:0:0:", "ＶＥＮＵＳ"),
-    #"958": ("1:0:19:83BE:4024:A:4D80000:0:0:0:", "バニラスカイチャンネル"),
-    #"959": ("1:0:19:83BF:4023:A:4D80000:0:0:0:", "エンタ！９５９"),
-    #"960": ("1:0:19:83C0:4028:A:4D80000:0:0:0:", "Zaptv"),
-    #"963": ("1:0:19:83C3:4028:A:4D80000:0:0:0:", "ダイナマイトTV"),
-    #"964": ("1:0:19:83C4:4028:A:4D80000:0:0:0:", "AV王"),
-    #"965": ("1:0:19:83C5:3018:A:5000000:0:0:0:", "レッドチェリー"),
-    #"966": ("1:0:19:83C6:3026:A:5000000:0:0:0:", "Splash"),
-    #"967": ("1:0:19:83C7:3026:A:5000000:0:0:0:", "フラミンゴ"),
     "599": ("1:0:19:8257:4024:A:4D80000:0:0:0:", "スカパー！プロモ599"),
 }
 
 class SkyPerfectUltimate:
     def __init__(self):
+        # 使用 Session 复用 TCP 连接
         self.session = requests.Session()
         self.base_url = "https://www.skyperfectv.co.jp"
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+            "Accept-Encoding": "gzip, deflate",
         }
-        # 预设年龄认证 Cookie
         self.auth_cookies = {
-            'isAdult': '1',
-            'age_check': '1',
-            'skp_adult_view': '1',
-            'ST_ADULT_FLG': '1'
+            'isAdult': '1', 'age_check': '1', 'skp_adult_view': '1', 'ST_ADULT_FLG': '1'
         }
+        self.session.headers.update(self.headers)
+        self.session.cookies.update(self.auth_cookies)
 
     def parse_japanese_time(self, date_raw, time_range_str):
-        """
-        智能日期处理：自动处理跨月、跨年及 30 小时制溢出
-        """
         try:
-            # 1. 提取月/日 (支持 03/30, 3/30, 2026/03/30 等各种形态)
             date_match = re.search(r'(\d{1,2})/(\d{1,2})', date_raw)
             if not date_match: return None, None
-            
             month, day = int(date_match.group(1)), int(date_match.group(2))
-            
-            # 2. 自动判定年份
             now = datetime.datetime.now()
             year = now.year
-            # 跨年逻辑：当前12月抓到1月数据 -> 明年；当前1月抓到12月数据 -> 去年
-            if now.month == 12 and month == 1:
-                year += 1
-            elif now.month == 1 and month == 12:
-                year -= 1
-            
-            # 3. 建立该日凌晨 00:00 的基准时间点
-            # datetime 会自动根据 year 判断 2月是 28 还是 29 天
+            if now.month == 12 and month == 1: year += 1
+            elif now.month == 1 and month == 12: year -= 1
             base_dt = datetime.datetime(year, month, day)
-            
-            # 4. 使用正则提取时间点，无视连接符是 ～、- 还是 〜
             time_parts = re.findall(r'(\d{1,2}:\d{2})', time_range_str)
             if len(time_parts) < 2: return None, None
             start_t, end_t = time_parts[0], time_parts[1]
             
             def get_actual_dt(hhmm, ref_date):
                 hh, mm = map(int, hhmm.split(':'))
-                # 核心魔法：timedelta 自动处理溢出
-                # 如果 ref_date 是 3月31日，加上 26小时，会自动变为 4月1日 02:00
                 return ref_date + timedelta(hours=hh, minutes=mm)
 
             start_dt = get_actual_dt(start_t, base_dt)
             end_dt = get_actual_dt(end_t, base_dt)
-            
-            # 5. 非 30 小时制下的跨天修正 (如 23:00 ～ 01:00)
-            if end_dt <= start_dt:
-                end_dt += timedelta(days=1)
-                
-            return (start_dt.strftime("%Y%m%d%H%M00 +0900"), 
-                    end_dt.strftime("%Y%m%d%H%M00 +0900"))
-        except Exception as e:
-            # print(f"时间转换解析失败: {e}")
-            return None, None
+            if end_dt <= start_dt: end_dt += timedelta(days=1)
+            return (start_dt.strftime("%Y%m%d%H%M00 +0900"), end_dt.strftime("%Y%m%d%H%M00 +0900"))
+        except: return None, None
 
     def fetch_detail(self, url, srv_ref, referer):
-        """深度抓取详情页：描述 + 精准时间"""
         try:
-            headers = self.headers.copy()
-            headers['Referer'] = referer
-            time.sleep(random.uniform(0.2, 0.5))
-            
-            res = self.session.get(url, headers=headers, cookies=self.auth_cookies, timeout=5)
+            headers = {"Referer": referer}
+            # 随机小延时防止被封
+            time.sleep(random.uniform(0.05, 0.15))
+            res = self.session.get(url, headers=headers, timeout=10)
             if res.status_code != 200: return None
             
-            dsoup = BeautifulSoup(res.text, 'html.parser')
-            
-            # 提取标题与时间节点
+            # 使用 lxml 解析，速度大幅提升
+            dsoup = BeautifulSoup(res.text, 'lxml')
             title_node = dsoup.select_one('.p-headline__ttl') or dsoup.select_one('h1')
             time_node = dsoup.select_one('.p-headline__info__time')
             if not title_node or not time_node: return None
             
-            # 提取并拼接长描述
             desc_parts = []
             short_node = dsoup.select_one('.p-info__detail p')
-            if short_node:
-                desc_parts.append(short_node.get_text(strip=True).replace('　もっと見る', ''))
+            if short_node: desc_parts.append(short_node.get_text(strip=True).replace('　もっと見る', ''))
+            long_node = dsoup.select_one('.p-info__cast p')
+            if long_node: desc_parts.append("【内容】" + long_node.get_text(strip=True))
             
-            long_node = dsoup.select_one('.p-info__cast p') # みどころ
-            if long_node:
-                desc_parts.append("【内容】" + long_node.get_text(strip=True))
-            
-            # 解析日期时间
             raw_time = time_node.get_text(strip=True)
-            # 详情页通常包含日期 03/30(月)
             date_node = dsoup.select_one('.p-program-detail__date')
             date_str = date_node.get_text(strip=True) if date_node else raw_time
-            
-            # 提取时间范围正则
             time_match = re.search(r'(\d{2}:\d{2}～\d{2}:\d{2})', raw_time)
             if not time_match: return None
             
             start_xml, stop_xml = self.parse_japanese_time(date_str, time_match.group(1))
-            
             if start_xml and stop_xml:
                 return {
-                    'ref': srv_ref,
-                    'title': title_node.get_text(strip=True),
+                    'ref': srv_ref, 'title': title_node.get_text(strip=True),
                     'desc': "\n\n".join(desc_parts) if desc_parts else title_node.get_text(strip=True),
-                    'start': start_xml,
-                    'stop': stop_xml
+                    'start': start_xml, 'stop': stop_xml
                 }
-        except:
-            return None
+        except: return None
 
     def fetch_channel(self, ch_num, srv_ref, name):
         channel_url = f"{self.base_url}/program/schedule/premium/channel:{ch_num}/"
         progs = []
         try:
-            res = self.session.get(channel_url, headers=self.headers, cookies=self.auth_cookies, timeout=20)
-            
-            # 针对成人频道的年龄门槛处理
+            res = self.session.get(channel_url, timeout=20)
             if "年齢確認" in res.text:
                 gate_url = f"{self.base_url}/program/schedule/adult/gate.php?url={channel_url}"
-                self.session.get(gate_url, headers=self.headers, cookies=self.auth_cookies, timeout=10)
-                res = self.session.get(channel_url, headers=self.headers, cookies=self.auth_cookies, timeout=20)
+                self.session.get(gate_url, timeout=10)
+                res = self.session.get(channel_url, timeout=20)
 
-            soup = BeautifulSoup(res.text, 'html.parser')
-            # 提取所有 uid 详情链接并去重
+            soup = BeautifulSoup(res.text, 'lxml')
             links = soup.find_all('a', href=re.compile(r'/program/detail/'))
             unique_hrefs = list(set([l.get('href') for l in links if l.get('href')]))
             
-            with ThreadPoolExecutor(max_workers=20) as detail_executor:
-                futures = [detail_executor.submit(self.fetch_detail, self.base_url + h, srv_ref, channel_url) 
-                           for h in unique_hrefs]
+            # 详情页并发数可稍高
+            with ThreadPoolExecutor(max_workers=15) as detail_executor:
+                futures = [detail_executor.submit(self.fetch_detail, self.base_url + h, srv_ref, channel_url) for h in unique_hrefs]
                 for f in as_completed(futures):
                     result = f.result()
                     if result: progs.append(result)
             
-            print(f"✅ {name} ({ch_num}) 抓取完成: {len(progs)} 条",flush=True)
+            print(f"✅ {name} ({ch_num}) 抓取完成: {len(progs)} 条", flush=True)
         except Exception as e:
-            print(f"💥 {name} 异常: {e}",flush=True)
+            print(f"💥 {name} 异常: {e}", flush=True)
         return progs
 
     def run(self):
+        start_global = time.time()
         all_results = []
-        # 1. 多线程抓取所有频道数据
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            tasks = [executor.submit(self.fetch_channel, ch_num, srv_ref, name) 
-                   for ch_num, (srv_ref, name) in CHANNELS_MAP.items()]
+        # 1. 并发抓取频道
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            tasks = [executor.submit(self.fetch_channel, ch_num, srv_ref, name) for ch_num, (srv_ref, name) in CHANNELS_MAP.items()]
             for f in as_completed(tasks):
                 all_results.extend(f.result())
 
-        # 2. 构建 XML 树结构 [cite: 65]
+        # 2. 构建 XML
         root = ET.Element("tv", {"generator-info-name": "SkyPerfectUltimate"})
-        
-        # 写入频道信息 [cite: 66]
         for ch_num, (srv_ref, name) in CHANNELS_MAP.items():
             chan = ET.SubElement(root, "channel", id=srv_ref)
             ET.SubElement(chan, "display-name").text = name
-
-        # 写入节目信息 [cite: 66]
         for p in all_results:
             prog = ET.SubElement(root, "programme", start=p['start'], stop=p['stop'], channel=p['ref'])
             ET.SubElement(prog, "title", lang="ja").text = p['title']
             ET.SubElement(prog, "desc", lang="ja").text = p['desc']
 
-        # 3. 文件保存与压缩逻辑 [cite: 68]
+        # 3. 高效保存与流式压缩
         xml_file = "epg_ultimate.xml"
         gz_file = "epg_ultimate.xml.gz"
-
-        # 保存原始 XML 文件
         tree = ET.ElementTree(root)
         ET.indent(tree, space="  ")
-        tree.write(xml_file, encoding="utf-8", xml_declaration=True)
-        print(f"✅ XML 生成完成: {xml_file}",flush=True)
-
-        # 生成 .gz 压缩包 [cite: 68]
-        with open(xml_file, 'rb') as f_in:
-            with gzip.open(gz_file, 'wb') as f_out:
-                shutil.copyfileobj(f_in, f_out)
         
-        print(f"🚀 任务结束！共计生成 {len(all_results)} 条带描述的节目数据。",flush=True)
-        print(f"📦 已打包压缩为: {gz_file}")
+        # 写入 XML 并直接生成 GZ (流式处理，更快)
+        tree.write(xml_file, encoding="utf-8", xml_declaration=True)
+        with open(xml_file, 'rb') as f_in, gzip.open(gz_file, 'wb') as f_out:
+            f_out.writelines(f_in)
+        
+        duration = time.time() - start_global
+        print(f"\n🚀 全部完成！耗时: {duration:.2f}s | 总数: {len(all_results)} 条", flush=True)
+        print(f"📦 已打包压缩为: {gz_file} ({os.path.getsize(gz_file)/1024:.1f} KB)")
 
 if __name__ == "__main__":
     SkyPerfectUltimate().run()
