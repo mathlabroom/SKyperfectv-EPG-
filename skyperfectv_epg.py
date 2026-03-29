@@ -54,38 +54,64 @@ class SkyPerfectUltimate:
         except Exception as e:
             return None, None
 
-    def fetch_detail(self, detail_url, srv_ref, channel_url):
-        """点进去详情页获取长描述和准确时间"""
+    def fetch_detail(self, url, srv_ref, referer):
         try:
-            # 模拟从频道页点击进入的 Referer
             headers = self.headers.copy()
-            headers['Referer'] = channel_url
+            headers['Referer'] = referer
             
-            time.sleep(random.uniform(0.1, 0.4)) # 轻微延迟
-            res = self.session.get(detail_url, headers=headers, timeout=12)
+            # 增加一点点随机延迟，防止被官网识别
+            time.sleep(random.uniform(0.3, 0.8))
+            res = self.session.get(url, headers=headers, timeout=15)
             if res.status_code != 200: return None
             
-            dsoup = BeautifulSoup(res.content, 'lxml')
+            # 使用 html.parser 确保解析稳定性
+            dsoup = BeautifulSoup(res.text, 'html.parser')
             
-            title = dsoup.select_one('.p-program-detail__title') or dsoup.select_one('h1')
-            date_n = dsoup.select_one('.p-program-detail__date')
-            time_n = dsoup.select_one('.p-program-detail__time')
-            desc_n = dsoup.select_one('.p-program-detail__content') or dsoup.select_one('.p-program-detail__outline')
+            # 1. 提取标题
+            title_node = dsoup.select_one('.p-headline__ttl')
+            title = title_node.get_text(strip=True) if title_node else "未知节目"
             
-            if not all([title, date_n, time_n]): return None
+            # 2. 提取时间 (03/30（月）00:30～02:10)
+            time_node = dsoup.select_one('.p-headline__info__time')
+            if not time_node: return None
+            raw_time_text = time_node.get_text(strip=True)
             
-            start_xml, stop_xml = self.parse_japanese_time(date_n.text.strip(), time_n.text.strip())
+            # 3. 提取描述 (合并简介和みどころ)
+            short_desc = dsoup.select_one('.p-info__detail p')
+            long_desc = dsoup.select_one('.p-info__cast p') # みどころ部分
             
-            if start_xml and stop_xml:
-                return {
-                    'ref': srv_ref,
-                    'title': title.get_text(strip=True),
-                    'desc': desc_n.get_text(strip=True) if desc_n else title.get_text(strip=True),
-                    'start': start_xml,
-                    'stop': stop_xml
-                }
-        except:
-            return None
+            desc_text = ""
+            if short_desc:
+                desc_text += short_desc.get_text(strip=True).replace('　もっと見る', '')
+            if long_desc:
+                desc_text += "\n\n【内容】" + long_desc.get_text(strip=True)
+            
+            # 如果都没抓到描述，用标题兜底
+            final_desc = desc_text if desc_text else title
+
+            # 4. 解析时间逻辑 (需要处理 03/30 这种格式)
+            # 因为详情页没有年份，我们需要自动补全当前年份 (2026)
+            current_year = datetime.datetime.now().year
+            # 正则匹配 03/30 和 00:30～02:10
+            date_match = re.search(r'(\d{2}/\d{2})', raw_time_text)
+            time_match = re.search(r'(\d{2}:\d{2}～\d{2}:\d{2})', raw_time_text)
+            
+            if date_match and time_match:
+                # 拼接成 2026/03/30
+                formatted_date = f"{current_year}/{date_match.group(1)}"
+                start_xml, stop_xml = self.parse_japanese_time(formatted_date, time_match.group(1))
+                
+                if start_xml and stop_xml:
+                    return {
+                        'ref': srv_ref,
+                        'title': title,
+                        'desc': final_desc,
+                        'start': start_xml,
+                        'stop': stop_xml
+                    }
+        except Exception as e:
+            print(f"⚠️ 解析详情页出错: {url} -> {e}")
+        return None
 
     def fetch_channel(self, ch_num, srv_ref, name):
         """访问频道页并分发详情页任务"""
