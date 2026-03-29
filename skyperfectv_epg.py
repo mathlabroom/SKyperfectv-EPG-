@@ -166,42 +166,52 @@ class SkyPerfectUltimate:
 
     def fetch_detail(self, url, srv_ref, referer):
         try:
-            # 优化点 1：只请求必要头部，减少包体长度
-            res = self.session.get(url, headers={"Referer": referer}, timeout=8)
+            res = self.session.get(url, headers={"Referer": referer}, timeout=10)
             if res.status_code != 200: return None
-            
             html = res.text
-            
-            # 优化点 2：使用正则替代 BeautifulSoup (针对详情页这种结构固定的页面)
-            # 正则提取比解析整个 DOM 树快得多
-            title_match = re.search(r'<h1 class="p-headline__ttl">(.+?)</h1>', html)
-            if not title_match:
-                title_match = re.search(r'<meta property="og:title" content="(.+?)">', html)
-            
-            desc_match = re.search(r'<meta name="description" content="(.+?)">', html)
-            time_match = re.search(r'(\d{2}:\d{2}～\d{2}:\d{2})', html)
-            
-            if not title_match or not time_match: return None
 
-            # 提取描述（优先取 meta 里的简介，速度最快）
-            title = title_match.group(1).strip()
+            # --- 1. 提取标题 (更宽容的正则) ---
+            # 匹配 <h1> 标签，不管它带什么 class
+            title_match = re.search(r'<h1[^>]*>(.*?)</h1>', html, re.S)
+            title = title_match.group(1).strip() if title_match else ""
+            # 如果标题包含 HTML 标签（如 <span>），清理掉
+            title = re.sub(r'<[^>]+>', '', title)
+
+            # --- 2. 提取描述 (从 meta 标签取最稳) ---
+            desc_match = re.search(r'<meta\s+name="description"\s+content="(.*?)"', html, re.I)
+            if not desc_match:
+                desc_match = re.search(r'<meta\s+property="og:description"\s+content="(.*?)"', html, re.I)
             desc = desc_match.group(1).strip() if desc_match else title
+
+            # --- 3. 提取时间与日期 ---
+            # 匹配 03/29(日) 21:00～23:10 这种格式
+            datetime_match = re.search(r'(\d{1,2}/\d{1,2})\s*\(.*?\)\s*(\d{2}:\d{2}～\d{2}:\d{2})', html)
             
-            # 日期处理逻辑保持你的 parse_japanese_time 不变
-            date_match = re.search(r'(\d{1,2}/\d{1,2})\(.+?\)', html)
-            date_str = date_match.group(1) if date_match else ""
+            if not datetime_match:
+                # 如果正则全挂了，用 BeautifulSoup 兜底（仅限当前这一个详情页）
+                soup = BeautifulSoup(html, 'lxml')
+                title = soup.find('h1').get_text(strip=True) if soup.find('h1') else "No Title"
+                # 尝试寻找时间相关 class
+                time_tag = soup.find(class_=re.compile(r'time|date|schedule'))
+                if not time_tag: return None # 彻底没救了
+                # ... 这里需要你原有的时间解析逻辑 ...
+                return None # 暂时跳过
+
+            date_str = datetime_match.group(1)
+            time_range = datetime_match.group(2)
             
-            start_xml, stop_xml = self.parse_japanese_time(date_str, time_match.group(1))
+            start_xml, stop_xml = self.parse_japanese_time(date_str, time_range)
             
-            if start_xml and stop_xml:
-                return {
-                    'ref': srv_ref,
-                    'title': title,
-                    'desc': desc,
-                    'start': start_xml,
-                    'stop': stop_xml
-                }
-        except:
+            return {
+                'ref': srv_ref,
+                'title': title,
+                'desc': desc,
+                'start': start_xml,
+                'stop': stop_xml
+            }
+        except Exception as e:
+            # 打印具体错误到日志，方便调试
+            # print(f"DEBUG: {url} 解析失败: {e}") 
             return None
 
     def fetch_channel(self, ch_num, srv_ref, name):
