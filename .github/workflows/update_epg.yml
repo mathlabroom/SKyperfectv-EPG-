@@ -21,7 +21,7 @@ jobs:
         run: pip install requests beautifulsoup4
 
       - name: Run Script
-        run: python your_script_name.py # ⚠️这里换成你Python文件的实际名字
+        run: python skyperfectv_epg.py # ⚠️这里换成你Python文件的实际名字
 
       - name: Commit and Push
         run: |
