@@ -170,38 +170,52 @@ class SkyPerfectUltimate:
             if res.status_code != 200: return None
             html = res.text
 
-            # --- 1. 提取标题 (更宽容的正则) ---
-            # 匹配 <h1> 标签，不管它带什么 class
-            title_match = re.search(r'<h1[^>]*>(.*?)</h1>', html, re.S)
-            title = title_match.group(1).strip() if title_match else ""
-            # 如果标题包含 HTML 标签（如 <span>），清理掉
-            title = re.sub(r'<[^>]+>', '', title)
-
-            # --- 2. 提取描述 (从 meta 标签取最稳) ---
-            desc_match = re.search(r'<meta\s+name="description"\s+content="(.*?)"', html, re.I)
-            if not desc_match:
-                desc_match = re.search(r'<meta\s+property="og:description"\s+content="(.*?)"', html, re.I)
-            desc = desc_match.group(1).strip() if desc_match else title
-
-            # --- 3. 提取时间与日期 ---
-            # 匹配 03/29(日) 21:00～23:10 这种格式
-            datetime_match = re.search(r'(\d{1,2}/\d{1,2})\s*\(.*?\)\s*(\d{2}:\d{2}～\d{2}:\d{2})', html)
+            # --- 步骤 1：尝试正则快速提取（追求速度） ---
+            title = ""
+            desc = ""
+            start_xml = stop_xml = None
             
-            if not datetime_match:
-                # 如果正则全挂了，用 BeautifulSoup 兜底（仅限当前这一个详情页）
+            # 匹配标题
+            t_match = re.search(r'<h1[^>]*>(.*?)</h1>', html, re.S)
+            if t_match:
+                title = re.sub(r'<[^>]+>', '', t_match.group(1)).strip()
+
+            # 匹配日期和时间 (例如: 03/29(日) 21:00～23:10)
+            dt_match = re.search(r'(\d{1,2}/\d{1,2})\s*\(.*?\)\s*(\d{2}:\d{2}～\d{2}:\d{2})', html)
+            
+            # --- 步骤 2：如果正则失败，立刻切换到 BeautifulSoup (追求稳定) ---
+            if not title or not dt_match:
                 soup = BeautifulSoup(html, 'lxml')
-                title = soup.find('h1').get_text(strip=True) if soup.find('h1') else "No Title"
-                # 尝试寻找时间相关 class
-                time_tag = soup.find(class_=re.compile(r'time|date|schedule'))
-                if not time_tag: return None # 彻底没救了
-                # ... 这里需要你原有的时间解析逻辑 ...
-                return None # 暂时跳过
+                # 提取标题
+                if not title:
+                    title_tag = soup.find('h1')
+                    title = title_tag.get_text(strip=True) if title_tag else "无标题"
+                
+                # 提取描述
+                desc_tag = soup.find('meta', attrs={'name': 'description'}) or \
+                           soup.find('meta', attrs={'property': 'og:description'})
+                desc = desc_tag['content'].strip() if desc_tag else title
+                
+                # 提取时间 (针对正则没抓到的情况)
+                if not dt_match:
+                    # 寻找包含“～”符号的文本块，通常就是时间
+                    time_element = soup.find(string=re.compile(r'\d{2}:\d{2}～\d{2}:\d{2}'))
+                    if time_element:
+                        # 向上找日期，或者直接从文本中提取
+                        full_text = time_element.parent.get_text()
+                        dt_match = re.search(r'(\d{1,2}/\d{1,2}).*?(\d{2}:\d{2}～\d{2}:\d{2})', full_text)
 
-            date_str = datetime_match.group(1)
-            time_range = datetime_match.group(2)
-            
-            start_xml, stop_xml = self.parse_japanese_time(date_str, time_range)
-            
+            # --- 步骤 3：数据清洗与转换 ---
+            if dt_match:
+                date_str = dt_match.group(1)
+                time_range = dt_match.group(2)
+                start_xml, stop_xml = self.parse_japanese_time(date_str, time_range)
+            else:
+                # 如果到这里还是没拿到时间，这页就废了
+                return None
+
+            if not desc: desc = title # 兜底描述
+
             return {
                 'ref': srv_ref,
                 'title': title,
@@ -210,8 +224,8 @@ class SkyPerfectUltimate:
                 'stop': stop_xml
             }
         except Exception as e:
-            # 打印具体错误到日志，方便调试
-            # print(f"DEBUG: {url} 解析失败: {e}") 
+            # 依然抓不到可以开启下面这行查原因
+            # print(f"Error on {url}: {e}")
             return None
 
     def fetch_channel(self, ch_num, srv_ref, name):
