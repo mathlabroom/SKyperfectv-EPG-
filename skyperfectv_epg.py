@@ -212,7 +212,7 @@ class SkyPerfectUltimate:
             headers['Referer'] = referer
             time.sleep(random.uniform(0.2, 0.5))
             
-            res = self.session.get(url, headers=headers, cookies=self.auth_cookies, timeout=12)
+            res = self.session.get(url, headers=headers, cookies=self.auth_cookies, timeout=5)
             if res.status_code != 200: return None
             
             dsoup = BeautifulSoup(res.text, 'html.parser')
@@ -272,7 +272,7 @@ class SkyPerfectUltimate:
             links = soup.find_all('a', href=re.compile(r'/program/detail/'))
             unique_hrefs = list(set([l.get('href') for l in links if l.get('href')]))
             
-            with ThreadPoolExecutor(max_workers=5) as detail_executor:
+            with ThreadPoolExecutor(max_workers=20) as detail_executor:
                 futures = [detail_executor.submit(self.fetch_detail, self.base_url + h, srv_ref, channel_url) 
                            for h in unique_hrefs]
                 for f in as_completed(futures):
@@ -287,7 +287,7 @@ class SkyPerfectUltimate:
     def run(self):
         all_results = []
         # 1. 多线程抓取所有频道数据
-        with ThreadPoolExecutor(max_workers=3) as executor:
+        with ThreadPoolExecutor(max_workers=10) as executor:
             tasks = [executor.submit(self.fetch_channel, ch_num, srv_ref, name) 
                    for ch_num, (srv_ref, name) in CHANNELS_MAP.items()]
             for f in as_completed(tasks):
