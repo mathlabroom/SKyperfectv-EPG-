@@ -162,36 +162,34 @@ class SkyPerfectUltimate:
             for f in as_completed(tasks):
                 all_results.extend(f.result())
 
-       # 2. 构建 XML
+        # 1. 创建更健壮的反向查询字典
+        # 确保 key 全部转为大写且去掉末尾冒号，防止匹配失败
+        ref_to_id = {v[0].rstrip(':').upper(): k for k, v in CHANNELS_MAP.items()}
+
+        # 2. 构建 XML
         root = ET.Element("tv", {"generator-info-name": "SkyPerfectUltimate"})
 
-        # 创建一个反向查询字典，用来通过 Service Ref 找到 频道号
-        # 假设 CHANNELS_MAP 结构是 {"622": ("1:0:19...", "NAME"), ...}
-        ref_to_id = {v[0]: k for k, v in CHANNELS_MAP.items()}
-
-        # 写入频道定义
+        # 写入频道定义 (Channel List)
         for ch_num, (srv_ref, name) in CHANNELS_MAP.items():
-            chan_id = f"CH.{ch_num}" 
-            chan = ET.SubElement(root, "channel", id=chan_id)
-            ET.SubElement(chan, "display-name").text = name
+    chan_id = f"CH.{ch_num}" 
+    chan = ET.SubElement(root, "channel", id=chan_id)
+    ET.SubElement(chan, "display-name").text = name
 
-        # 写入节目内容
+        # 写入节目详情 (Programmes)
         for p in all_results:
-            # 核心修正：通过 p['ref'] 找到对应的频道号
-            raw_ref = p['ref']
-            # 如果 p['ref'] 结尾有冒号，记得去掉再查，否则匹配不到
-            clean_ref = raw_ref.rstrip(':') 
+            # 核心修正：对抓取到的 ref 进行清洗，确保能从字典里搜到
+            raw_ref = p.get('ref', '')
+            clean_ref = raw_ref.rstrip(':').upper() # 去冒号并转大写
     
-            # 查找对应的简写 ID (如 CH.622)
-            short_id = f"CH.{ref_to_id.get(clean_ref, 'Unknown')}"
-    
-            # 如果你在 fetch_detail 时已经直接传了频道号（如 "622"），则直接用：
-            # short_id = f"CH.{p['ref']}"
+            # 从字典里取频道号，如果实在找不到再给 Unknown
+            ch_num = ref_to_id.get(clean_ref, "Unknown")
+            short_id = f"CH.{ch_num}"
 
+            # 构建 programme 标签
             prog = ET.SubElement(root, "programme", 
                                  start=p['start'], 
                                  stop=p['stop'], 
-                                 channel=short_id) # 这里必须是 CH.622
+                                 channel=short_id)
     
             ET.SubElement(prog, "title", lang="ja").text = p['title']
             ET.SubElement(prog, "desc", lang="ja").text = p['desc']
