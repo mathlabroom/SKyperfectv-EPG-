@@ -162,37 +162,16 @@ class SkyPerfectUltimate:
             for f in as_completed(tasks):
                 all_results.extend(f.result())
 
-        # 1. 创建更健壮的反向查询字典
-        # 确保 key 全部转为大写且去掉末尾冒号，防止匹配失败
-        ref_to_id = {v[0].rstrip(':').upper(): k for k, v in CHANNELS_MAP.items()}
+        # 2. 构建 XML
+        root = ET.Element("tv", {"generator-info-name": "SkyPerfectUltimate"})
+        for ch_num, (srv_ref, name) in CHANNELS_MAP.items():
+            chan = ET.SubElement(root, "channel", id=srv_ref)
+            ET.SubElement(chan, "display-name").text = name
+        for p in all_results:
+            prog = ET.SubElement(root, "programme", start=p['start'], stop=p['stop'], channel=p['ref'])
+            ET.SubElement(prog, "title", lang="ja").text = p['title']
+            ET.SubElement(prog, "desc", lang="ja").text = p['desc']
 
-        # 2. 构建 XML
-        root = ET.Element("tv", {"generator-info-name": "SkyPerfectUltimate"})
-
-        # 写入频道定义 (Channel List)
-        for ch_num, (srv_ref, name) in CHANNELS_MAP.items():
-    chan_id = f"CH.{ch_num}" 
-    chan = ET.SubElement(root, "channel", id=chan_id)
-    ET.SubElement(chan, "display-name").text = name
-
-        # 写入节目详情 (Programmes)
-        for p in all_results:
-            # 核心修正：对抓取到的 ref 进行清洗，确保能从字典里搜到
-            raw_ref = p.get('ref', '')
-            clean_ref = raw_ref.rstrip(':').upper() # 去冒号并转大写
-    
-            # 从字典里取频道号，如果实在找不到再给 Unknown
-            ch_num = ref_to_id.get(clean_ref, "Unknown")
-            short_id = f"CH.{ch_num}"
-
-            # 构建 programme 标签
-            prog = ET.SubElement(root, "programme", 
-                                 start=p['start'], 
-                                 stop=p['stop'], 
-                                 channel=short_id)
-    
-            ET.SubElement(prog, "title", lang="ja").text = p['title']
-            ET.SubElement(prog, "desc", lang="ja").text = p['desc']
         # 3. 高效保存与流式压缩
         xml_file = "epg_ultimate.xml"
         gz_file = "epg_ultimate.xml.gz"
