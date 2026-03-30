@@ -278,8 +278,11 @@ class SkyPerfectUltimate:
             for f in as_completed(tasks):
                 result = f.result()
                 if result:
-                    all_progs.extend(result)
-                    count += 1
+                        all_progs.extend(result)
+                        count += 1
+                except Exception as e:
+                    print(f"⚠️ 某个频道抓取失败: {e}")
+                    continue # 失败了就跳过，继续下一个，别让程序停
                 
                 # 每抓完 5 个频道，就强行存一次盘，防止程序崩溃导致白跑
                 if count % 5 == 0:
