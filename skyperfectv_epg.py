@@ -58,61 +58,64 @@ class SkyPerfectUltimate:
         try:
             res = self.session.get(url, headers={"Referer": referer}, timeout=10)
             if res.status_code != 200: return None
-            # 确保使用正确的编码，防止日文乱码
+            
+            # 解决乱码问题（非常重要）
             res.encoding = res.apparent_encoding 
             html = res.text
-
             soup = BeautifulSoup(html, 'lxml')
 
-            # --- 1. 提取标题 (Title) ---
+            # 1. 抓取标题 (Title)
+            # 先找 h1，没有就找 meta 里的标题
             title_tag = soup.find('h1')
-            title = title_tag.get_text(strip=True) if title_tag else "无标题"
+            title = title_tag.get_text(strip=True) if title_tag else ""
+            if not title:
+                title = soup.find('meta', property='og:title')['content'].split('|')[0].strip()
 
-            # --- 2. 提取时间 (Time) ---
-            # 依然保留正则，因为时间格式在 HTML 中通常比较固定
-            dt_match = re.search(r'(\d{1,2}/\d{1,2})\s*\(.*?\)\s*(\d{2}:\d{2}～\d{2}:\d{2})', html)
-            if dt_match:
-                date_str = dt_match.group(1)
-                time_range = dt_match.group(2)
-                start_xml, stop_xml = self.parse_japanese_time(date_str, time_range)
-            else:
-                return None # 没时间就无法生成 EPG 条目
+            # 2. 抓取时间 (DateTime) - 增强版匹配
+            # 不再单纯依赖正则，先找包含时间的 p 标签
+            start_xml = stop_xml = None
+            
+            # 尝试在页面上找包含 "～" 且包含数字的时间块
+            time_str = ""
+            time_element = soup.find('p', class_='p-info__time') # 常见类名
+            if not time_element:
+                time_element = soup.find(string=re.compile(r'\d{1,2}/\d{1,2}.*?\d{2}:\d{2}'))
 
-            # --- 3. 提取深度描述 (Description) ---
+            if time_element:
+                time_str = time_element.get_text(strip=True)
+                # 兼容全角/半角括号和空格
+                dt_match = re.search(r'(\d{1,2}/\d{1,2}).*?(\d{2}:\d{2}).*?(\d{2}:\d{2})', time_str)
+                if dt_match:
+                    date_str = dt_match.group(1)
+                    # 重新拼凑成 parse_japanese_time 喜欢的格式：21:00～23:10
+                    time_range = f"{dt_match.group(2)}～{dt_match.group(3)}"
+                    start_xml, stop_xml = self.parse_japanese_time(date_str, time_range)
+
+            # 如果还是拿不到时间，这页没法生成 EPG，直接放弃
+            if not start_xml:
+                return None
+
+            # 3. 抓取内容 (之前给你的增强版代码)
             desc_parts = []
-
-            # A. 提取主简介 (p-info__detail)
+            
+            # A. 简介
             main_detail = soup.find('div', class_='p-info__detail')
             if main_detail and main_detail.p:
-                # 过滤掉“更多”按钮文字
-                main_text = main_detail.p.get_text(strip=True).replace('もっと見る', '')
-                if main_text:
-                    desc_parts.append(main_text)
+                desc_parts.append(main_detail.p.get_text(strip=True).replace('もっと見る', ''))
 
-            # B. 提取详细规格 (p-info__detail__overflow)
+            # B. 规格详情 (举办日、实况等)
             overflow_div = soup.find('div', class_='p-info__detail__overflow')
             if overflow_div:
-                spec_list = []
-                # 找到所有的项目：举办日、实况、解说等
-                for item in overflow_div.find_all('div', class_='p-info__cast'):
-                    h3 = item.h3.get_text(strip=True) if item.h3 else ""
-                    p = item.p.get_text(strip=True) if item.p else ""
-                    if h3 and p:
-                        spec_list.append(f"【{h3}】{p}")
-                if spec_list:
-                    desc_parts.append("\n".join(spec_list))
+                specs = [f"【{it.h3.text}】{it.p.text}" for it in overflow_div.find_all('div', class_='p-info__cast') if it.h3 and it.p]
+                desc_parts.append("\n".join(specs))
 
-            # C. 提取演职人员 (p-info__performer)
+            # C. 出演者
             performer_div = soup.find('div', class_='p-info__performer')
             if performer_div:
                 names = [li.get_text(strip=True) for li in performer_div.find_all('li') if li.get_text(strip=True)]
-                if names:
-                    desc_parts.append("【出演者】" + "、".join(names))
+                if names: desc_parts.append("【出演者】" + "、".join(names))
 
-            # 合并所有部分，用双换行符隔开，在 Enigma2 上显示更清晰
-            desc = "\n\n".join(desc_parts)
-            if not desc:
-                desc = title # 兜底
+            desc = "\n\n".join(desc_parts) if desc_parts else title
 
             return {
                 'ref': srv_ref,
@@ -121,10 +124,9 @@ class SkyPerfectUltimate:
                 'start': start_xml,
                 'stop': stop_xml
             }
-        except Exception as e:
-            # print(f"Error on {url}: {e}")
+        except Exception:
             return None
-
+            
     def fetch_channel(self, ch_num, srv_ref, name):
         channel_url = f"{self.base_url}/program/schedule/premium/channel:{ch_num}/"
         progs = []
