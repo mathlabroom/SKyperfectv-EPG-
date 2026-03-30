@@ -22,17 +22,39 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4 lxml
 
+      # --- 关键：恢复缓存 ---
+      - name: Restore EPG Cache
+        uses: actions/cache/restore@v3
+        with:
+          path: epg_cache.json
+          # 使用固定的 key 前缀，尝试匹配最近的一次缓存
+          key: ${{ runner.os }}-epg-cache-
+          restore-keys: |
+            ${{ runner.os }}-epg-cache-
+
       - name: Run EPG Scraper
-        run: python skyperfectv_epg.py  # 确保文件名与你的脚本名一致
+        # ！！！注意：这里确保文件名和你仓库里的 python 文件名完全一致 ！！！
+        run: python skyperfectv_epg.py 
+
+      # --- 关键：保存更新后的缓存 ---
+      - name: Save EPG Cache
+        uses: actions/cache/save@v3
+        if: always() # 确保即使脚本部分报错也能保存已抓取的缓存
+        with:
+          path: epg_cache.json
+          # 使用 run_id 确保每次运行都能生成一个新的缓存节点
+          key: ${{ runner.os }}-epg-cache-${{ github.run_id }}
 
       - name: Commit and Push
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          # 检查文件是否存在，防止 git add 报错
+          
+          # 检查文件是否存在
           if [ -f "epg_ultimate.xml" ]; then
             git add epg_ultimate.xml epg_ultimate.xml.gz
-            git commit -m "Daily EPG Update" || exit 0
+            # 只有当文件有变化时才提交，防止报错
+            git commit -m "Daily EPG Update (Incremental)" || echo "No changes to commit"
             git push
           else
             echo "Error: epg_ultimate.xml not found!"
