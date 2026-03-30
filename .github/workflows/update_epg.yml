@@ -2,7 +2,7 @@ name: Auto Update EPG
 
 on:
   schedule:
-    - cron: '0 21 * * *' # 每天北京时间凌晨5点运行
+    - cron: '0 19 * * *' # 每天北京时间凌晨3点运行（19:00 UTC）
   workflow_dispatch:      # 允许手动点击运行按钮
 
 jobs:
