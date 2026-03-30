@@ -156,21 +156,48 @@ class SkyPerfectUltimate:
     def run(self):
         start_global = time.time()
         all_results = []
+        
+        # --- 0. 预处理：创建健壮的反向查询字典 ---
+        # 键为：清洗后的 Service Ref (去冒号、转大写)
+        # 值为：频道号 (如 622)
+        ref_to_id = {
+            v[0].rstrip(':').upper(): k 
+            for k, v in CHANNELS_MAP.items()
+        }
+
         # 1. 并发抓取频道
         with ThreadPoolExecutor(max_workers=8) as executor:
             tasks = [executor.submit(self.fetch_channel, ch_num, srv_ref, name) for ch_num, (srv_ref, name) in CHANNELS_MAP.items()]
             for f in as_completed(tasks):
                 all_results.extend(f.result())
 
-        # 2. 构建 XML
-        root = ET.Element("tv", {"generator-info-name": "SkyPerfectUltimate"})
-        for ch_num, (srv_ref, name) in CHANNELS_MAP.items():
-            chan = ET.SubElement(root, "channel", id=srv_ref)
-            ET.SubElement(chan, "display-name").text = name
-        for p in all_results:
-            prog = ET.SubElement(root, "programme", start=p['start'], stop=p['stop'], channel=p['ref'])
-            ET.SubElement(prog, "title", lang="ja").text = p['title']
-            ET.SubElement(prog, "desc", lang="ja").text = p['desc']
+        # 2. 构建 XML
+        root = ET.Element("tv", {"generator-info-name": "SkyPerfectUltimate"})
+        
+        # A. 定义频道列表
+        for ch_num, (srv_ref, name) in CHANNELS_MAP.items():
+            # 统一使用 CH.xxx 格式
+            chan_id = f"CH.{ch_num}" 
+            chan = ET.SubElement(root, "channel", id=chan_id)
+            ET.SubElement(chan, "display-name").text = name
+
+        # B. 填充节目数据
+        for p in all_results:
+            # 核心修正：清洗抓取到的 p['ref'] 以便匹配字典
+            raw_ref = p.get('ref', '')
+            clean_key = raw_ref.rstrip(':').upper()
+            
+            # 匹配频道号，匹配不到则标记 Unknown
+            ch_num = ref_to_id.get(clean_key, "Unknown")
+            final_channel_id = f"CH.{ch_num}"
+
+            prog = ET.SubElement(root, "programme", 
+                                 start=p['start'], 
+                                 stop=p['stop'], 
+                                 channel=final_channel_id)
+            
+            ET.SubElement(prog, "title", lang="ja").text = p['title']
+            ET.SubElement(prog, "desc", lang="ja").text = p['desc']
 
         # 3. 高效保存与流式压缩
         xml_file = "epg_ultimate.xml"
@@ -178,7 +205,6 @@ class SkyPerfectUltimate:
         tree = ET.ElementTree(root)
         ET.indent(tree, space="  ")
         
-        # 写入 XML 并直接生成 GZ (流式处理，更快)
         tree.write(xml_file, encoding="utf-8", xml_declaration=True)
         with open(xml_file, 'rb') as f_in, gzip.open(gz_file, 'wb') as f_out:
             f_out.writelines(f_in)
