@@ -168,53 +168,61 @@ class SkyPerfectUltimate:
         try:
             res = self.session.get(url, headers={"Referer": referer}, timeout=10)
             if res.status_code != 200: return None
+            # 确保使用正确的编码，防止日文乱码
+            res.encoding = res.apparent_encoding 
             html = res.text
 
-            # --- 步骤 1：尝试正则快速提取（追求速度） ---
-            title = ""
-            desc = ""
-            start_xml = stop_xml = None
-            
-            # 匹配标题
-            t_match = re.search(r'<h1[^>]*>(.*?)</h1>', html, re.S)
-            if t_match:
-                title = re.sub(r'<[^>]+>', '', t_match.group(1)).strip()
+            soup = BeautifulSoup(html, 'lxml')
 
-            # 匹配日期和时间 (例如: 03/29(日) 21:00～23:10)
+            # --- 1. 提取标题 (Title) ---
+            title_tag = soup.find('h1')
+            title = title_tag.get_text(strip=True) if title_tag else "无标题"
+
+            # --- 2. 提取时间 (Time) ---
+            # 依然保留正则，因为时间格式在 HTML 中通常比较固定
             dt_match = re.search(r'(\d{1,2}/\d{1,2})\s*\(.*?\)\s*(\d{2}:\d{2}～\d{2}:\d{2})', html)
-            
-            # --- 步骤 2：如果正则失败，立刻切换到 BeautifulSoup (追求稳定) ---
-            if not title or not dt_match:
-                soup = BeautifulSoup(html, 'lxml')
-                # 提取标题
-                if not title:
-                    title_tag = soup.find('h1')
-                    title = title_tag.get_text(strip=True) if title_tag else "无标题"
-                
-                # 提取描述
-                desc_tag = soup.find('meta', attrs={'name': 'description'}) or \
-                           soup.find('meta', attrs={'property': 'og:description'})
-                desc = desc_tag['content'].strip() if desc_tag else title
-                
-                # 提取时间 (针对正则没抓到的情况)
-                if not dt_match:
-                    # 寻找包含“～”符号的文本块，通常就是时间
-                    time_element = soup.find(string=re.compile(r'\d{2}:\d{2}～\d{2}:\d{2}'))
-                    if time_element:
-                        # 向上找日期，或者直接从文本中提取
-                        full_text = time_element.parent.get_text()
-                        dt_match = re.search(r'(\d{1,2}/\d{1,2}).*?(\d{2}:\d{2}～\d{2}:\d{2})', full_text)
-
-            # --- 步骤 3：数据清洗与转换 ---
             if dt_match:
                 date_str = dt_match.group(1)
                 time_range = dt_match.group(2)
                 start_xml, stop_xml = self.parse_japanese_time(date_str, time_range)
             else:
-                # 如果到这里还是没拿到时间，这页就废了
-                return None
+                return None # 没时间就无法生成 EPG 条目
 
-            if not desc: desc = title # 兜底描述
+            # --- 3. 提取深度描述 (Description) ---
+            desc_parts = []
+
+            # A. 提取主简介 (p-info__detail)
+            main_detail = soup.find('div', class_='p-info__detail')
+            if main_detail and main_detail.p:
+                # 过滤掉“更多”按钮文字
+                main_text = main_detail.p.get_text(strip=True).replace('もっと見る', '')
+                if main_text:
+                    desc_parts.append(main_text)
+
+            # B. 提取详细规格 (p-info__detail__overflow)
+            overflow_div = soup.find('div', class_='p-info__detail__overflow')
+            if overflow_div:
+                spec_list = []
+                # 找到所有的项目：举办日、实况、解说等
+                for item in overflow_div.find_all('div', class_='p-info__cast'):
+                    h3 = item.h3.get_text(strip=True) if item.h3 else ""
+                    p = item.p.get_text(strip=True) if item.p else ""
+                    if h3 and p:
+                        spec_list.append(f"【{h3}】{p}")
+                if spec_list:
+                    desc_parts.append("\n".join(spec_list))
+
+            # C. 提取演职人员 (p-info__performer)
+            performer_div = soup.find('div', class_='p-info__performer')
+            if performer_div:
+                names = [li.get_text(strip=True) for li in performer_div.find_all('li') if li.get_text(strip=True)]
+                if names:
+                    desc_parts.append("【出演者】" + "、".join(names))
+
+            # 合并所有部分，用双换行符隔开，在 Enigma2 上显示更清晰
+            desc = "\n\n".join(desc_parts)
+            if not desc:
+                desc = title # 兜底
 
             return {
                 'ref': srv_ref,
@@ -224,7 +232,6 @@ class SkyPerfectUltimate:
                 'stop': stop_xml
             }
         except Exception as e:
-            # 依然抓不到可以开启下面这行查原因
             # print(f"Error on {url}: {e}")
             return None
 
