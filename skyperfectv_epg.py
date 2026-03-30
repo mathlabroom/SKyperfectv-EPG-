@@ -65,9 +65,9 @@ class SkyPerfectUltimate:
             # 清理过期缓存（超过 10 天的删除，防止文件无限增大）
             today = datetime.datetime.now()
             # 这里的简单清理仅作为示例，如果需要更复杂的清理可以根据时间戳判断
-            if len(self.cache) > 10000:
+            if len(self.cache) > 50000:
                 print("🧹 缓存过大，触发自动清理...")
-                self.cache = {k: v for i, (k, v) in enumerate(self.cache.items()) if i > 2000}
+                self.cache = {k: v for i, (k, v) in enumerate(self.cache.items()) if i > 5000}
 
             try:
                 with open(self.cache_file, 'w', encoding='utf-8') as f:
