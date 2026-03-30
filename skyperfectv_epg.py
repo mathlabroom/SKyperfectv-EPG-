@@ -266,13 +266,28 @@ class SkyPerfectUltimate:
 
     def run(self):
         start_time = time.time()
-        # 反向查找表：用于映射 srv_ref -> ch_num
         ref_to_id = {v[0].rstrip(':').upper(): k for k, v in CHANNELS_MAP.items()}
-        
         all_progs = []
+        
+        # 记录本次运行新抓取的数量，用于每隔几个频道存一次盘
+        count = 0
+        
         with ThreadPoolExecutor(max_workers=5) as executor:
             tasks = [executor.submit(self.fetch_channel, k, v[0], v[1]) for k, v in CHANNELS_MAP.items()]
-            for f in as_completed(tasks): all_progs.extend(f.result())
+            
+            for f in as_completed(tasks):
+                result = f.result()
+                if result:
+                    all_progs.extend(result)
+                    count += 1
+                
+                # 每抓完 5 个频道，就强行存一次盘，防止程序崩溃导致白跑
+                if count % 5 == 0:
+                    self.save_cache()
+                    print(f"📡 已自动存档：当前已完成 {count} 个频道")
+
+        # 最终保存（生成 XML）
+        self.save_cache()
 
         # 构建 XML
         root = ET.Element("tv", {"generator-info-name": "SkyPerfectUltimate"})
