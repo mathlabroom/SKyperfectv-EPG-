@@ -162,29 +162,39 @@ class SkyPerfectUltimate:
             for f in as_completed(tasks):
                 all_results.extend(f.result())
 
-        # 2. 构建 XML
+       # 2. 构建 XML
         root = ET.Element("tv", {"generator-info-name": "SkyPerfectUltimate"})
-        
-        # 遍历频道地图，将 ID 设置为 CH.623 这种格式
+
+        # 创建一个反向查询字典，用来通过 Service Ref 找到 频道号
+        # 假设 CHANNELS_MAP 结构是 {"622": ("1:0:19...", "NAME"), ...}
+        ref_to_id = {v[0]: k for k, v in CHANNELS_MAP.items()}
+
+        # 写入频道定义
         for ch_num, (srv_ref, name) in CHANNELS_MAP.items():
-            # 关键修改：id 设为 CH.xxx
             chan_id = f"CH.{ch_num}" 
             chan = ET.SubElement(root, "channel", id=chan_id)
             ET.SubElement(chan, "display-name").text = name
 
+        # 写入节目内容
         for p in all_results:
-            # 假设 p['ref'] 现在存的是 srv_ref，我们需要根据反向查找或者在 fetch 时就处理好
-            # 如果你的 all_results 里的 p['ref'] 已经是 "623" 这种简写：
-            display_id = p['ref'] if p['ref'].startswith("CH.") else f"CH.{p['ref']}"
-            
+            # 核心修正：通过 p['ref'] 找到对应的频道号
+            raw_ref = p['ref']
+            # 如果 p['ref'] 结尾有冒号，记得去掉再查，否则匹配不到
+            clean_ref = raw_ref.rstrip(':') 
+    
+            # 查找对应的简写 ID (如 CH.622)
+            short_id = f"CH.{ref_to_id.get(clean_ref, 'Unknown')}"
+    
+            # 如果你在 fetch_detail 时已经直接传了频道号（如 "622"），则直接用：
+            # short_id = f"CH.{p['ref']}"
+
             prog = ET.SubElement(root, "programme", 
                                  start=p['start'], 
                                  stop=p['stop'], 
-                                 channel=display_id) # 关键修改：使用简写 ID
-            
+                                 channel=short_id) # 这里必须是 CH.622
+    
             ET.SubElement(prog, "title", lang="ja").text = p['title']
             ET.SubElement(prog, "desc", lang="ja").text = p['desc']
-
         # 3. 高效保存与流式压缩
         xml_file = "epg_ultimate.xml"
         gz_file = "epg_ultimate.xml.gz"
