@@ -164,11 +164,24 @@ class SkyPerfectUltimate:
 
         # 2. 构建 XML
         root = ET.Element("tv", {"generator-info-name": "SkyPerfectUltimate"})
+        
+        # 遍历频道地图，将 ID 设置为 CH.623 这种格式
         for ch_num, (srv_ref, name) in CHANNELS_MAP.items():
-            chan = ET.SubElement(root, "channel", id=srv_ref)
+            # 关键修改：id 设为 CH.xxx
+            chan_id = f"CH.{ch_num}" 
+            chan = ET.SubElement(root, "channel", id=chan_id)
             ET.SubElement(chan, "display-name").text = name
+
         for p in all_results:
-            prog = ET.SubElement(root, "programme", start=p['start'], stop=p['stop'], channel=p['ref'])
+            # 假设 p['ref'] 现在存的是 srv_ref，我们需要根据反向查找或者在 fetch 时就处理好
+            # 如果你的 all_results 里的 p['ref'] 已经是 "623" 这种简写：
+            display_id = p['ref'] if p['ref'].startswith("CH.") else f"CH.{p['ref']}"
+            
+            prog = ET.SubElement(root, "programme", 
+                                 start=p['start'], 
+                                 stop=p['stop'], 
+                                 channel=display_id) # 关键修改：使用简写 ID
+            
             ET.SubElement(prog, "title", lang="ja").text = p['title']
             ET.SubElement(prog, "desc", lang="ja").text = p['desc']
 
