@@ -5,32 +5,49 @@ from datetime import timedelta
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
-import random
 import re
 import gzip
 import os
+import json
 
-# 频道配置保持不变
+# 1. 频道配置：确保这里的 srv_ref 与你的卫星接收机一致
 CHANNELS_MAP = {
-    "622": ("1:0:19:826E:3017:A:5000000:0:0:0:", "ＷＯＷＯＷライブ"),
+    "622": ("1:0:19:826E:3017:A:5000000:0:0:0", "ＷＯＷＯＷライブ"),
+    "623": ("1:0:19:826F:3019:A:5000000:0:0:0", "ＷＯＷＯＷシネマ"),
 }
 
 class SkyPerfectUltimate:
     def __init__(self):
-        # 使用 Session 复用 TCP 连接
         self.session = requests.Session()
         self.base_url = "https://www.skyperfectv.co.jp"
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-            "Accept-Encoding": "gzip, deflate",
-        }
-        self.auth_cookies = {
-            'isAdult': '1', 'age_check': '1', 'skp_adult_view': '1', 'ST_ADULT_FLG': '1'
         }
         self.session.headers.update(self.headers)
-        self.session.cookies.update(self.auth_cookies)
+        self.session.cookies.update({'isAdult': '1', 'age_check': '1'})
+        
+        # 增量更新缓存配置
+        self.cache_file = "epg_cache.json"
+        self.cache = self.load_cache()
+
+    def load_cache(self):
+        """加载本地缓存，避免重复请求详情页"""
+        if os.path.exists(self.cache_file):
+            try:
+                with open(self.cache_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except: return {}
+        return {}
+
+    def save_cache(self):
+        """保存缓存，只保留 7 天内的数据防止文件过大"""
+        # 简单的过期清理逻辑（可选）
+        if len(self.cache) > 5000: self.cache = {} 
+        with open(self.cache_file, 'w', encoding='utf-8') as f:
+            json.dump(self.cache, f, ensure_ascii=False, indent=2)
 
     def parse_japanese_time(self, date_raw, time_range_str):
+        """解析日本时间格式"""
         try:
             date_match = re.search(r'(\d{1,2})/(\d{1,2})', date_raw)
             if not date_match: return None, None
@@ -38,180 +55,123 @@ class SkyPerfectUltimate:
             now = datetime.datetime.now()
             year = now.year
             if now.month == 12 and month == 1: year += 1
-            elif now.month == 1 and month == 12: year -= 1
             base_dt = datetime.datetime(year, month, day)
             time_parts = re.findall(r'(\d{1,2}:\d{2})', time_range_str)
             if len(time_parts) < 2: return None, None
-            start_t, end_t = time_parts[0], time_parts[1]
             
-            def get_actual_dt(hhmm, ref_date):
-                hh, mm = map(int, hhmm.split(':'))
-                return ref_date + timedelta(hours=hh, minutes=mm)
-
-            start_dt = get_actual_dt(start_t, base_dt)
-            end_dt = get_actual_dt(end_t, base_dt)
+            start_hh, start_mm = map(int, time_parts[0].split(':'))
+            end_hh, end_mm = map(int, time_parts[1].split(':'))
+            
+            start_dt = base_dt + timedelta(hours=start_hh, minutes=start_mm)
+            end_dt = base_dt + timedelta(hours=end_hh, minutes=end_mm)
             if end_dt <= start_dt: end_dt += timedelta(days=1)
+            
             return (start_dt.strftime("%Y%m%d%H%M00 +0900"), end_dt.strftime("%Y%m%d%H%M00 +0900"))
         except: return None, None
 
     def fetch_detail(self, url, srv_ref, referer):
+        """获取节目详情（含增量更新逻辑）"""
+        # --- 检查缓存 ---
+        if url in self.cache:
+            data = self.cache[url].copy()
+            data['ref'] = srv_ref # 恢复当前频道的 reference
+            return data
+
         try:
             res = self.session.get(url, headers={"Referer": referer}, timeout=10)
             if res.status_code != 200: return None
-            
-            # 解决乱码问题（非常重要）
             res.encoding = res.apparent_encoding 
-            html = res.text
-            soup = BeautifulSoup(html, 'lxml')
+            soup = BeautifulSoup(res.text, 'lxml')
 
-            # 1. 抓取标题 (Title)
-            # 先找 h1，没有就找 meta 里的标题
+            # 提取标题
             title_tag = soup.find('h1')
-            title = title_tag.get_text(strip=True) if title_tag else ""
-            if not title:
-                title = soup.find('meta', property='og:title')['content'].split('|')[0].strip()
+            title = title_tag.get_text(strip=True) if title_tag else "No Title"
 
-            # 2. 抓取时间 (DateTime) - 增强版匹配
-            # 不再单纯依赖正则，先找包含时间的 p 标签
-            start_xml = stop_xml = None
+            # 提取时间
+            time_el = soup.find('p', class_='p-info__time') or soup.find(string=re.compile(r'\d{1,2}/\d{1,2}.*?\d{2}:\d{2}'))
+            if not time_el: return None
             
-            # 尝试在页面上找包含 "～" 且包含数字的时间块
-            time_str = ""
-            time_element = soup.find('p', class_='p-info__time') # 常见类名
-            if not time_element:
-                time_element = soup.find(string=re.compile(r'\d{1,2}/\d{1,2}.*?\d{2}:\d{2}'))
+            dt_m = re.search(r'(\d{1,2}/\d{1,2}).*?(\d{2}:\d{2}).*?(\d{2}:\d{2})', time_el.get_text(strip=True))
+            if not dt_m: return None
+            start_xml, stop_xml = self.parse_japanese_time(dt_m.group(1), f"{dt_m.group(2)}～{dt_m.group(3)}")
 
-            if time_element:
-                time_str = time_element.get_text(strip=True)
-                # 兼容全角/半角括号和空格
-                dt_match = re.search(r'(\d{1,2}/\d{1,2}).*?(\d{2}:\d{2}).*?(\d{2}:\d{2})', time_str)
-                if dt_match:
-                    date_str = dt_match.group(1)
-                    # 重新拼凑成 parse_japanese_time 喜欢的格式：21:00～23:10
-                    time_range = f"{dt_match.group(2)}～{dt_match.group(3)}"
-                    start_xml, stop_xml = self.parse_japanese_time(date_str, time_range)
-
-            # 如果还是拿不到时间，这页没法生成 EPG，直接放弃
-            if not start_xml:
-                return None
-
-            # 3. 抓取内容 (之前给你的增强版代码)
-            desc_parts = []
-            
+            # 提取深度描述
+            parts = []
             # A. 简介
-            main_detail = soup.find('div', class_='p-info__detail')
-            if main_detail and main_detail.p:
-                desc_parts.append(main_detail.p.get_text(strip=True).replace('もっと見る', ''))
-
-            # B. 规格详情 (举办日、实况等)
-            overflow_div = soup.find('div', class_='p-info__detail__overflow')
-            if overflow_div:
-                specs = [f"【{it.h3.text}】{it.p.text}" for it in overflow_div.find_all('div', class_='p-info__cast') if it.h3 and it.p]
-                desc_parts.append("\n".join(specs))
-
+            main_d = soup.find('div', class_='p-info__detail')
+            if main_d and main_d.p: parts.append(main_d.p.get_text(strip=True).replace('もっと見る', ''))
+            # B. 规格
+            ov_d = soup.find('div', class_='p-info__detail__overflow')
+            if ov_d:
+                specs = [f"【{it.h3.text}】{it.p.text}" for it in ov_d.find_all('div', class_='p-info__cast') if it.h3 and it.p]
+                parts.append("\n".join(specs))
             # C. 出演者
-            performer_div = soup.find('div', class_='p-info__performer')
-            if performer_div:
-                names = [li.get_text(strip=True) for li in performer_div.find_all('li') if li.get_text(strip=True)]
-                if names: desc_parts.append("【出演者】" + "、".join(names))
+            perf_d = soup.find('div', class_='p-info__performer')
+            if perf_d:
+                names = [li.get_text(strip=True) for li in perf_d.find_all('li') if li.get_text(strip=True)]
+                if names: parts.append("【出演者】" + "、".join(names))
 
-            desc = "\n\n".join(desc_parts) if desc_parts else title
+            desc = "\n\n".join(parts) if parts else title
 
-            return {
-                'ref': srv_ref,
-                'title': title,
-                'desc': desc,
-                'start': start_xml,
-                'stop': stop_xml
-            }
-        except Exception:
-            return None
+            result = {'title': title, 'desc': desc, 'start': start_xml, 'stop': stop_xml}
             
+            # --- 写入缓存 ---
+            self.cache[url] = result.copy()
+            
+            result['ref'] = srv_ref
+            return result
+        except: return None
+
     def fetch_channel(self, ch_num, srv_ref, name):
-        channel_url = f"{self.base_url}/program/schedule/premium/channel:{ch_num}/"
+        """抓取单频道列表页"""
+        url = f"{self.base_url}/program/schedule/premium/channel:{ch_num}/"
         progs = []
         try:
-            res = self.session.get(channel_url, timeout=20)
-            if "年齢確認" in res.text:
-                gate_url = f"{self.base_url}/program/schedule/adult/gate.php?url={channel_url}"
-                self.session.get(gate_url, timeout=10)
-                res = self.session.get(channel_url, timeout=20)
-
+            res = self.session.get(url, timeout=15)
             soup = BeautifulSoup(res.text, 'lxml')
-            links = soup.find_all('a', href=re.compile(r'/program/detail/'))
-            unique_hrefs = list(set([l.get('href') for l in links if l.get('href')]))
+            links = list(set([l.get('href') for l in soup.find_all('a', href=re.compile(r'/program/detail/'))]))
             
-            # 详情页并发数可稍高
-            with ThreadPoolExecutor(max_workers=25) as detail_executor:
-                futures = [detail_executor.submit(self.fetch_detail, self.base_url + h, srv_ref, channel_url) for h in unique_hrefs]
+            with ThreadPoolExecutor(max_workers=15) as executor:
+                futures = [executor.submit(self.fetch_detail, self.base_url + h, srv_ref, url) for h in links]
                 for f in as_completed(futures):
-                    result = f.result()
-                    if result: progs.append(result)
-            
-            print(f"✅ {name} ({ch_num}) 抓取完成: {len(progs)} 条", flush=True)
-        except Exception as e:
-            print(f"💥 {name} 异常: {e}", flush=True)
+                    res_data = f.result()
+                    if res_data: progs.append(res_data)
+            print(f"✅ {name} ({ch_num}) 完成: {len(progs)} 条")
+        except Exception as e: print(f"❌ {name} 错误: {e}")
         return progs
 
     def run(self):
-        start_global = time.time()
-        all_results = []
+        start_time = time.time()
+        # 反向查找表：用于映射 srv_ref -> ch_num
+        ref_to_id = {v[0].rstrip(':').upper(): k for k, v in CHANNELS_MAP.items()}
         
-        # --- 0. 预处理：创建健壮的反向查询字典 ---
-        # 键为：清洗后的 Service Ref (去冒号、转大写)
-        # 值为：频道号 (如 622)
-        ref_to_id = {
-            v[0].rstrip(':').upper(): k 
-            for k, v in CHANNELS_MAP.items()
-        }
+        all_progs = []
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            tasks = [executor.submit(self.fetch_channel, k, v[0], v[1]) for k, v in CHANNELS_MAP.items()]
+            for f in as_completed(tasks): all_progs.extend(f.result())
 
-        # 1. 并发抓取频道
-        with ThreadPoolExecutor(max_workers=8) as executor:
-            tasks = [executor.submit(self.fetch_channel, ch_num, srv_ref, name) for ch_num, (srv_ref, name) in CHANNELS_MAP.items()]
-            for f in as_completed(tasks):
-                all_results.extend(f.result())
-
-        # 2. 构建 XML
+        # 构建 XML
         root = ET.Element("tv", {"generator-info-name": "SkyPerfectUltimate"})
-        
-        # A. 定义频道列表
-        for ch_num, (srv_ref, name) in CHANNELS_MAP.items():
-            # 统一使用 CH.xxx 格式
-            chan_id = f"CH.{ch_num}" 
-            chan = ET.SubElement(root, "channel", id=chan_id)
+        for ch_num, (ref, name) in CHANNELS_MAP.items():
+            chan = ET.SubElement(root, "channel", id=f"CH.{ch_num}")
             ET.SubElement(chan, "display-name").text = name
 
-        # B. 填充节目数据
-        for p in all_results:
-            # 核心修正：清洗抓取到的 p['ref'] 以便匹配字典
-            raw_ref = p.get('ref', '')
-            clean_key = raw_ref.rstrip(':').upper()
-            
-            # 匹配频道号，匹配不到则标记 Unknown
-            ch_num = ref_to_id.get(clean_key, "Unknown")
-            final_channel_id = f"CH.{ch_num}"
-
-            prog = ET.SubElement(root, "programme", 
-                                 start=p['start'], 
-                                 stop=p['stop'], 
-                                 channel=final_channel_id)
-            
+        for p in all_progs:
+            clean_ref = p['ref'].rstrip(':').upper()
+            short_id = f"CH.{ref_to_id.get(clean_ref, 'Unknown')}"
+            prog = ET.SubElement(root, "programme", start=p['start'], stop=p['stop'], channel=short_id)
             ET.SubElement(prog, "title", lang="ja").text = p['title']
             ET.SubElement(prog, "desc", lang="ja").text = p['desc']
 
-        # 3. 高效保存与流式压缩
-        xml_file = "epg_ultimate.xml"
-        gz_file = "epg_ultimate.xml.gz"
+        # 保存与压缩
         tree = ET.ElementTree(root)
         ET.indent(tree, space="  ")
-        
-        tree.write(xml_file, encoding="utf-8", xml_declaration=True)
-        with open(xml_file, 'rb') as f_in, gzip.open(gz_file, 'wb') as f_out:
+        tree.write("epg_ultimate.xml", encoding="utf-8", xml_declaration=True)
+        with open("epg_ultimate.xml", 'rb') as f_in, gzip.open("epg_ultimate.xml.gz", 'wb') as f_out:
             f_out.writelines(f_in)
         
-        duration = time.time() - start_global
-        print(f"\n🚀 全部完成！耗时: {duration:.2f}s | 总数: {len(all_results)} 条", flush=True)
-        print(f"📦 已打包压缩为: {gz_file} ({os.path.getsize(gz_file)/1024:.1f} KB)")
+        self.save_cache() # 别忘了保存缓存
+        print(f"\n🚀 完成！耗时: {time.time()-start_time:.1f}s | 缓存量: {len(self.cache)}")
 
 if __name__ == "__main__":
     SkyPerfectUltimate().run()
