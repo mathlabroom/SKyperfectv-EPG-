@@ -47,16 +47,28 @@ jobs:
 
       - name: Commit and Push
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # 检查文件是否存在
-          if [ -f "epg_ultimate.xml" ]; then
-            git add epg_ultimate.xml epg_ultimate.xml.gz
-            # 只有当文件有变化时才提交，防止报错
-            git commit -m "Daily EPG Update (Incremental)" || echo "No changes to commit"
-            git push
-          else
+          # 1. 配置 Git 信息
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          # 2. 检查关键文件是否存在
+          if [ ! -f "epg_ultimate.xml" ]; then
             echo "Error: epg_ultimate.xml not found!"
             exit 1
+          fi
+
+          # 3. 添加所有更改（包含 .xml 和 .gz）
+          git add epg_ultimate.xml epg_ultimate.xml.gz
+
+          # 4. 只有在有变动时才进行后续操作
+          if ! git diff --staged --quiet; then
+            git commit -m "Daily EPG Update (Incremental)"
+            
+            # 5. 使用 rebase 解决远程冲突，并推送到 main
+            # 如果 push 失败，尝试重试 3 次，增加稳定性
+            for i in {1..3}; do
+              git pull --rebase origin main && git push origin main && break || sleep 5
+            done
+          else
+            echo "No changes to commit, skipping push."
           fi
