@@ -211,21 +211,32 @@ class SkyPerfectUltimate:
 
         # 添加节目详情
         for p in all_progs:
+            # 1. 映射逻辑不变
             clean_ref = p['ref'].rstrip(':').upper()
             short_id = f"CH.{ref_to_id.get(clean_ref, 'Unknown')}"
-            prog = ET.SubElement(root, "programme", channel=short_id, start=p['start'], stop=p['stop'] )
-            ET.SubElement(prog, "title", lang="ja").text = p['title']
             
-            # --- 仅增加去空行逻辑 ---
-            if p['desc']:
-                # 分行 -> 去除每行首尾空格 -> 过滤掉内容为空的行 -> 重新用换行符连接
-                p['desc'] = "\n".join([line.strip() for line in p['desc'].splitlines() if line.strip()])
+            # 2. 构建节点（确保 channel 在前以兼容旧插件）
+            prog = ET.SubElement(root, "programme", 
+                                 channel=short_id, 
+                                 start=p['start'], 
+                                 stop=p['stop'])
             
-            ET.SubElement(prog, "desc", lang="ja").text = p['desc']
-            # -----------------------
-
-            # 加入 UID 标签，方便后续追踪
-            ET.SubElement(prog, "remark").text = "cached_item"
+            # 3. 清洗标题
+            ET.SubElement(prog, "title", lang="ja").text = p['title'].strip() if p['title'] else ""
+            
+            # 4. 深度清洗描述（去空行 + 杂质过滤）
+            desc_text = p.get('desc', '')
+            if desc_text:
+                # 分行 -> 去空格 -> 过滤空行
+                lines = [line.strip() for line in desc_text.splitlines() if line.strip()]
+                # 合并并再次确保没有非标准的控制字符
+                clean_desc = "\n".join(lines)
+                # 这一行能过滤掉 XML 不允许的低位控制字符，防止导入崩溃
+                clean_desc = "".join(c for c in clean_desc if c.isprintable() or c in "\n\r\t")
+                ET.SubElement(prog, "desc", lang="ja").text = clean_desc
+            
+            # 5. 备注（既然怕大，可以考虑删掉这行减负）
+            # ET.SubElement(prog, "remark").text = "cached_item"
 
         # 3. 内存排序 (这是最有效率的方式)
         channels = root.findall('channel')
