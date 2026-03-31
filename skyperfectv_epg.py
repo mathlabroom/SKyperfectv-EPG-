@@ -209,35 +209,22 @@ class SkyPerfectUltimate:
             chan = ET.SubElement(root, "channel", id=f"CH.{ch_num}")
             ET.SubElement(chan, "display-name").text = name
 
-       # 添加节目详情
+        # 添加节目详情
         for p in all_progs:
-            # --- 1. 获取长 ID (Service Reference) 并清洗 ---
-            # 建议直接用 p['ref']，如果你的变量里已经是长 ID 的话
-            srv_ref = p['ref'].strip() 
+            clean_ref = p['ref'].rstrip(':').upper()
+            short_id = f"CH.{ref_to_id.get(clean_ref, 'Unknown')}"
+            prog = ET.SubElement(root, "programme", channel=short_id, start=p['start'], stop=p['stop'] )
+            ET.SubElement(prog, "title", lang="ja").text = p['title']
             
-            # --- 2. 清洗标题和描述（核心：删除空白行和首尾空格） ---
-            # 清理标题
-            clean_title = p['title'].strip() if p['title'] else ""
-            
-            # 清理描述：分行 -> 去空格 -> 过滤掉空行 -> 重新合并
+            # --- 仅增加去空行逻辑 ---
             if p['desc']:
-                lines = [line.strip() for line in p['desc'].splitlines() if line.strip()]
-                clean_desc = "\n".join(lines)
-            else:
-                clean_desc = ""
+                # 分行 -> 去除每行首尾空格 -> 过滤掉内容为空的行 -> 重新用换行符连接
+                p['desc'] = "\n".join([line.strip() for line in p['desc'].splitlines() if line.strip()])
+            
+            ET.SubElement(prog, "desc", lang="ja").text = p['desc']
+            # -----------------------
 
-            # --- 3. 构建 XML 节点 ---
-            # 注意：这里 channel 直接用了 srv_ref，不再经过 short_id 转换
-            # 这样机顶盒能“直连”匹配，成功率最高
-            prog = ET.SubElement(root, "programme", 
-                                 channel=short_id, 
-                                 start=p['start'], 
-                                 stop=p['stop'])
-            
-            ET.SubElement(prog, "title", lang="ja").text = clean_title
-            ET.SubElement(prog, "desc", lang="ja").text = clean_desc
-            
-            # 加入备注
+            # 加入 UID 标签，方便后续追踪
             ET.SubElement(prog, "remark").text = "cached_item"
 
         # 3. 内存排序 (这是最有效率的方式)
