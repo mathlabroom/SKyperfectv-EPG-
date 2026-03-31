@@ -230,7 +230,7 @@ class SkyPerfectUltimate:
             # 注意：这里 channel 直接用了 srv_ref，不再经过 short_id 转换
             # 这样机顶盒能“直连”匹配，成功率最高
             prog = ET.SubElement(root, "programme", 
-                                 channel=srv_ref, 
+                                 channel=short_id, 
                                  start=p['start'], 
                                  stop=p['stop'])
             
