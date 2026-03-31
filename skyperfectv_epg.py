@@ -264,7 +264,32 @@ class SkyPerfectUltimate:
         except Exception as e: print(f"❌ {name} 错误: {e}")
         return progs
 
+    def sort_epg(self, file_path):
+        """专门负责对生成的 XML 进行清洗和排序"""
+        try:
+            tree = ET.parse(file_path)
+            root = tree.getroot()
+
+            # 1. 提取标签
+            channels = root.findall('channel')
+            programmes = root.findall('programme')
+
+            # 2. 核心排序：先按频道 ID 升序，同频道按时间升序
+            programmes.sort(key=lambda x: (x.get('channel', ''), x.get('start', '')))
+
+            # 3. 重组 XML 树
+            # 这种写法比循环 remove 更简洁高效
+            new_children = channels + programmes
+            root[:] = new_children 
+
+            # 4. 写回文件
+            tree.write(file_path, encoding='utf-8', xml_declaration=True)
+            print(f"✅ EPG 排序完成：已按频道和时间重组 {len(programmes)} 条节目。")
+        except Exception as e:
+            print(f"❌ 排序失败: {e}")
+    
     def run(self):
+        file_name = "epg_ultimate.xml" # 先定义
         start_time = time.time()
         ref_to_id = {v[0].rstrip(':').upper(): k for k, v in CHANNELS_MAP.items()}
         all_progs = []
@@ -277,7 +302,9 @@ class SkyPerfectUltimate:
                 try:
                     result = f.result()
                     if result:
-                        all_progs.extend(result)
+                        # 建议加锁确保列表合并的绝对安全
+                        with self.lock:
+                            all_progs.extend(result)
                         count += 1
                         if count % 5 == 0:
                             self.save_cache()
@@ -304,16 +331,24 @@ class SkyPerfectUltimate:
             # 虽然 XMLTV 标准没有专门的 uid 标签，但通常放入 <origin> 或自定义标签
             ET.SubElement(prog, "remark").text = "cached_item" 
 
-        # 3. 落地保存
+        # 3. 内存排序 (这是最有效率的方式)
+        channels = root.findall('channel')
+        programmes = root.findall('programme')
+        programmes.sort(key=lambda x: (x.get('channel', ''), x.get('start', '')))
+        root[:] = channels + programmes
+        print(f"✅ 内存排序完成：共计 {len(programmes)} 条节目")
+
+        # 4. 落地保存并压缩
         self.save_cache()
         tree = ET.ElementTree(root)
         ET.indent(tree, space="  ")
-        tree.write("epg_ultimate.xml", encoding="utf-8", xml_declaration=True)
+        tree.write(file_name, encoding="utf-8", xml_declaration=True)
         
-        with open("epg_ultimate.xml", 'rb') as f_in, gzip.open("epg_ultimate.xml.gz", 'wb') as f_out:
+        # 5. 生成压缩包
+        with open(file_name, 'rb') as f_in, gzip.open(f"{file_name}.gz", 'wb') as f_out:
             f_out.writelines(f_in)
         
-        print(f"\n🚀 全部任务完成！耗时: {time.time()-start_time:.1f}s | 最终缓存库总量: {len(self.cache)}")
-
+        print(f"\n🚀 全部任务完成！耗时: {time.time()-start_time:.1f}s | 缓存库总量: {len(self.cache)}")
+      
 if __name__ == "__main__":
     SkyPerfectUltimate().run()
