@@ -33,6 +33,9 @@ jobs:
             ${{ runner.os }}-epg-cache-
 
       - name: Run EPG Scraper
+        env:
+        # 将 GitHub 仓库变量映射到系统环境变量
+          CHANNELS_JSON: ${{ vars.CHANNELS_JSON }}
         # ！！！注意：这里确保文件名和你仓库里的 python 文件名完全一致 ！！！
         run: python skyperfectv_epg.py 
 
