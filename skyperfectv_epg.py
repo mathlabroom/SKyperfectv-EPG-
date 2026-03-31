@@ -213,7 +213,7 @@ class SkyPerfectUltimate:
         for p in all_progs:
             clean_ref = p['ref'].rstrip(':').upper()
             short_id = f"CH.{ref_to_id.get(clean_ref, 'Unknown')}"
-            prog = ET.SubElement(root, "programme", start=p['start'], stop=p['stop'], channel=short_id)
+            prog = ET.SubElement(root, "programme", channel=short_id, start=p['start'], stop=p['stop'] )
             ET.SubElement(prog, "title", lang="ja").text = p['title']
             ET.SubElement(prog, "desc", lang="ja").text = p['desc']
             # 加入 UID 标签，方便后续追踪
