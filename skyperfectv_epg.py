@@ -126,7 +126,7 @@ class SkyPerfectUltimate:
             desc = "\n\n".join(parts) if parts else title
             
             # 1. 关键词截断逻辑
-            STOP_WORDS = ("【お知らせ","お知らせ",  "【料金案内", "料金案内", "【■セットご案内", "【■セット案内","▼", "▽", "詳細は","◆視聴料金◆","◆オススメ◆ ","公式HP", "0120-")
+            STOP_WORDS = ("【お知らせ","お知らせ",  "【料金案内", "料金案内", "【■セットご案内", "【■セット案内", "詳細は", "◆視聴料金◆", "◆オススメ◆", "公式HP", "0120-")
             cutoff = len(desc)
             for word in STOP_WORDS:
                 pos = desc.find(word)
