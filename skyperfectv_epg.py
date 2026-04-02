@@ -203,6 +203,12 @@ class SkyPerfectUltimate:
 
         # 2. 构建最终 XML
         root = ET.Element("tv", {"generator-info-name": "SkyPerfectUltimate"})
+
+        import re
+        # 匹配关键词及其后所有内容的正则
+        RE_AD_STOP = re.compile(r"(【お知らせ[12１２]?】|【料金案内】|【■セットご案内】|[▼▽]|詳細は|公式HP|0120-).*")
+        # 匹配 XML 非法字符的正则
+        RE_XML_ILLEGAL = re.compile(r'[^\x09\x0A\x0D\x20-\x7E\x85\xA0-\uD7FF\xE000-\xFFFD\U00010000-\U0010FFFF]')
         
         # 添加频道头
         for ch_num, (ref, name) in CHANNELS_MAP.items():
@@ -211,12 +217,12 @@ class SkyPerfectUltimate:
 
         # --- 添加 programme 节点 ---
         for p in all_progs:
-            # 1. 映射逻辑不变
+            # 1. 映射逻辑
             clean_ref = p['ref'].rstrip(':').upper()
             short_id_num = ref_to_id.get(clean_ref, 'Unknown')
             short_id = f"CH.{short_id_num}"
             
-            # 2. 构建节点（确保 channel 在前以兼容旧插件）
+            # 2. 构建节点
             prog = ET.SubElement(root, "programme", 
                                  channel=short_id, 
                                  start=p['start'], 
@@ -225,31 +231,25 @@ class SkyPerfectUltimate:
             # 3. 清洗标题
             ET.SubElement(prog, "title", lang="ja").text = p['title'].strip() if p['title'] else ""
             
-            # 4. 深度清洗描述（针对 900 系频道进行广告截断与过滤）
+            # 4. 深度清洗描述
             desc_text = p.get('desc', '')
             if desc_text:
-                # 🎯 性能优化：只对 900 系（成人/特殊频道）执行重度清洗
+                # 🎯 只有 900 系频道执行正则重火力清洗
                 if str(short_id_num).startswith('9'):
-                    # A. 关键词截断逻辑
-                    stop_keywords = [
-                        "【お知らせ】", "【お知らせ1】", "【お知らせ2】", "【お知らせ１】", "【お知らせ２】",
-                        "【料金案内】", "【■セットご案内】", "▼", "▽", "詳細は", "公式HP", "0120-"
-                    ]
-                    for word in stop_keywords:
-                        if word in desc_text:
-                            desc_text = desc_text.split(word, 1)[0]
-                            break  # 截断后立即停止当前关键词搜索
-
-                    # B. 格式整理与非法字符过滤
+                    # A. 一次性截断广告内容
+                    desc_text = RE_AD_STOP.sub('', desc_text)
+                    
+                    # B. 处理换行与空行
                     lines = [line.strip() for line in desc_text.splitlines() if line.strip()]
                     clean_desc = "\n".join(lines)
-                    # 过滤 XML 不允许的低位控制字符
-                    desc_text = "".join(c for c in clean_desc if c.isprintable() or c in "\n\r\t")
+                    
+                    # C. 极速过滤非法字符
+                    desc_text = RE_XML_ILLEGAL.sub('', clean_desc)
                 else:
-                    # 非 900 系频道：只做基础的 strip 保证格式整洁
+                    # 非 900 系频道仅做基础修剪
                     desc_text = desc_text.strip()
                 
-                # 只有清洗后还有内容才写入 desc 节点
+                # 只有清洗后还有内容才写入
                 if desc_text.strip():
                     ET.SubElement(prog, "desc", lang="ja").text = desc_text
             
