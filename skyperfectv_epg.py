@@ -213,7 +213,8 @@ class SkyPerfectUltimate:
         for p in all_progs:
             # 1. 映射逻辑不变
             clean_ref = p['ref'].rstrip(':').upper()
-            short_id = f"CH.{ref_to_id.get(clean_ref, 'Unknown')}"
+            short_id_num = ref_to_id.get(clean_ref, 'Unknown')
+            short_id = f"CH.{short_id_num}"
             
             # 2. 构建节点（确保 channel 在前以兼容旧插件）
             prog = ET.SubElement(root, "programme", 
@@ -224,32 +225,37 @@ class SkyPerfectUltimate:
             # 3. 清洗标题
             ET.SubElement(prog, "title", lang="ja").text = p['title'].strip() if p['title'] else ""
             
-            # 4. 深度清洗描述（增加关键词截断 + 去空行 + 杂质过滤）
+            # 4. 深度清洗描述（针对 900 系频道进行广告截断与过滤）
             desc_text = p.get('desc', '')
             if desc_text:
-                # --- 新增：关键词截断逻辑 ---
-                stop_keywords = [
-                    "【お知らせ】", "【お知らせ1】", "【お知らせ2】", "【お知らせ１】", "【お知らせ２】",
-                    "【料金案内】", "【■セットご案内】", "▼", "▽", "詳細は", "公式HP", "0120-"
-                ]
-                for word in stop_keywords:
-                    if word in desc_text:
-                        desc_text = desc_text.split(word, 1)[0]
-                # -------------------------
+                # 🎯 性能优化：只对 900 系（成人/特殊频道）执行重度清洗
+                if str(short_id_num).startswith('9'):
+                    # A. 关键词截断逻辑
+                    stop_keywords = [
+                        "【お知らせ】", "【お知らせ1】", "【お知らせ2】", "【お知らせ１】", "【お知らせ２】",
+                        "【料金案内】", "【■セットご案内】", "▼", "▽", "詳細は", "公式HP", "0120-"
+                    ]
+                    for word in stop_keywords:
+                        if word in desc_text:
+                            desc_text = desc_text.split(word, 1)[0]
+                            break  # 截断后立即停止当前关键词搜索
 
-                # 分行 -> 去空格 -> 过滤空行
-                lines = [line.strip() for line in desc_text.splitlines() if line.strip()]
-                # 合并并再次确保没有非标准的控制字符
-                clean_desc = "\n".join(lines)
-                # 这一行能过滤掉 XML 不允许的低位控制字符，防止导入崩溃
-                clean_desc = "".join(c for c in clean_desc if c.isprintable() or c in "\n\r\t")
+                    # B. 格式整理与非法字符过滤
+                    lines = [line.strip() for line in desc_text.splitlines() if line.strip()]
+                    clean_desc = "\n".join(lines)
+                    # 过滤 XML 不允许的低位控制字符
+                    desc_text = "".join(c for c in clean_desc if c.isprintable() or c in "\n\r\t")
+                else:
+                    # 非 900 系频道：只做基础的 strip 保证格式整洁
+                    desc_text = desc_text.strip()
                 
-                # 只有清洗后还有内容才写入
-                if clean_desc.strip():
-                    ET.SubElement(prog, "desc", lang="ja").text = clean_desc
+                # 只有清洗后还有内容才写入 desc 节点
+                if desc_text.strip():
+                    ET.SubElement(prog, "desc", lang="ja").text = desc_text
             
-            # 5. 备注（既然怕大，可以考虑删掉这行减负）
+            # 5. 备注（已根据建议注释掉，减少文件体积）
             # ET.SubElement(prog, "remark").text = "cached_item"
+            
 
         # 3. 内存排序 (这是最有效率的方式)
         channels = root.findall('channel')
