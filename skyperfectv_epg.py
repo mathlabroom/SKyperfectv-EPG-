@@ -89,7 +89,7 @@ class SkyPerfectUltimate:
         except: return None, None
 
     def fetch_detail(self, url, srv_ref, referer):
-        # 1. 增量对比：如果 URL 在缓存中，直接返回，不再请求网络
+        # 1. 增量对比：如果 URL 在缓存中，直接返回
         if url in self.cache:
             data = self.cache[url].copy()
             data['ref'] = srv_ref
@@ -122,8 +122,25 @@ class SkyPerfectUltimate:
                 names = [li.get_text(strip=True) for li in perf_d.find_all('li') if li.get_text(strip=True)]
                 if names: parts.append("【出演者】" + "、".join(names))
 
+            # --- ✨ 核心修改：抓取时即刻清洗 ---
             desc = "\n\n".join(parts) if parts else title
-            result = {'title': title, 'desc': desc, 'start': start_xml, 'stop': stop_xml}
+            
+            # 1. 关键词截断逻辑
+            STOP_WORDS = ("【お知らせ", "【料金案内", "【■セットご案内", "▼", "▽", "詳細は", "公式HP", "0120-")
+            cutoff = len(desc)
+            for word in STOP_WORDS:
+                pos = desc.find(word)
+                if pos != -1 and pos < cutoff:
+                    cutoff = pos
+            desc = desc[:cutoff]
+
+            # 2. 删除空行 + 删除不可见字符（针对 Enigma2 优化）
+            lines = [l.strip() for l in desc.splitlines() if l.strip()]
+            clean_desc = "\n".join(lines)
+            # 仅保留可打印字符，彻底防止 Enigma2 报错
+            clean_desc = "".join(c for c in clean_desc if c.isprintable() or c in "\n\r\t")
+            
+            result = {'title': title, 'desc': clean_desc, 'start': start_xml, 'stop': stop_xml}
             
             # --- 线程安全地写入缓存 ---
             with self.lock:
@@ -136,21 +153,42 @@ class SkyPerfectUltimate:
     def fetch_channel(self, ch_num, srv_ref, name):
         url = f"{self.base_url}/program/schedule/premium/channel:{ch_num}/"
         progs = []
+        # 实时告知开始抓取
+        print(f"⏳ 正在同步: {name:<20} (ID: {ch_num})", flush=True)
+        
         try:
             res = self.session.get(url, timeout=15)
             soup = BeautifulSoup(res.text, 'lxml')
+            
             # 提取详情页链接
             links = list(set([l.get('href') for l in soup.find_all('a', href=re.compile(r'/program/detail/'))]))
+            total_links = len(links)
+            
+            # 统计命中情况
+            cached_count = 0
             
             # 嵌套多线程抓取详情
             with ThreadPoolExecutor(max_workers=10) as executor:
-                futures = [executor.submit(self.fetch_detail, self.base_url + h, srv_ref, url) for h in links]
+                # 注意：这里我们稍微修改逻辑，以便统计缓存
+                futures = []
+                for h in links:
+                    full_url = self.base_url + h
+                    if full_url in self.cache:
+                        cached_count += 1
+                    futures.append(executor.submit(self.fetch_detail, full_url, srv_ref, url))
+                
                 for f in as_completed(futures):
                     res_data = f.result()
-                    if res_data: progs.append(res_data)
+                    if res_data:
+                        progs.append(res_data)
             
-            print(f"✅ {name} ({ch_num}) 处理完成 (含缓存命中)")
-        except Exception as e: print(f"❌ {name} 错误: {e}")
+            # 实时输出该频道的总结
+            new_fetched = total_links - cached_count
+            print(f"✅ {name:<20} | 总计: {len(progs):>2} | 缓存: {cached_count:>2} | 新抓: {new_fetched:>2}", flush=True)
+            
+        except Exception as e:
+            print(f"❌ {name:<20} 发生错误: {e}", flush=True)
+            
         return progs
 
     def sort_epg(self, file_path):
@@ -178,7 +216,7 @@ class SkyPerfectUltimate:
             print(f"❌ 排序失败: {e}")
     
     def run(self):
-        file_name = "epg_ultimate.xml" # 先定义
+        file_name = "epg_ultimate.xml" 
         start_time = time.time()
         ref_to_id = {v[0].rstrip(':').upper(): k for k, v in CHANNELS_MAP.items()}
         all_progs = []
@@ -191,7 +229,6 @@ class SkyPerfectUltimate:
                 try:
                     result = f.result()
                     if result:
-                        # 建议加锁确保列表合并的绝对安全
                         with self.lock:
                             all_progs.extend(result)
                         count += 1
@@ -209,12 +246,8 @@ class SkyPerfectUltimate:
             chan = ET.SubElement(root, "channel", id=f"CH.{ch_num}")
             ET.SubElement(chan, "display-name").text = name
         
-        # --- 定义关键词元组（放在循环外） ---
-        STOP_WORDS = ("【お知らせ", "【料金案内", "【■セットご案内", "▼", "▽", "詳細は", "公式HP", "0120-")
-        # --- 添加 programme 节点 ---
-        
+        # --- ✨ 简化后的 programme 节点生成 ---
         for p in all_progs:
-            # ... 1. 映射逻辑与 2. 节点构建保持不变 ...
             clean_ref = p['ref'].rstrip(':').upper()
             short_id_num = ref_to_id.get(clean_ref, 'Unknown')
             short_id = f"CH.{short_id_num}"
@@ -222,38 +255,13 @@ class SkyPerfectUltimate:
             prog = ET.SubElement(root, "programme", channel=short_id, start=p['start'], stop=p['stop'])
             ET.SubElement(prog, "title", lang="ja").text = p['title'].strip() if p['title'] else ""
 
-            # 4. 深度清洗描述
-            desc_text = p.get('desc', '')
-            if desc_text:
-                # 🎯 只有 900 系频道执行清洗
-                if str(short_id_num).startswith('9'):
-                    # --- A. 极其快速的关键词截断（不使用正则） ---
-                    first_pos = len(desc_text)
-                    for word in STOP_WORDS:
-                        pos = desc_text.find(word)
-                        if pos != -1 and pos < first_pos:
-                            first_pos = pos
-                    
-                    # 如果找到了关键词，直接截断
-                    if first_pos < len(desc_text):
-                        desc_text = desc_text[:first_pos]
-
-                    # --- B. 极简格式清理（跳过耗时的 isprintable 遍历） ---
-                    # 只做分行和去空格，这在 Python 里非常快
-                    lines = [line.strip() for line in desc_text.splitlines() if line.strip()]
-                    desc_text = "\n".join(lines)
-                
-                # 只有清洗后还有内容才写入
-                if desc_text.strip():
-                    # 注意：如果 XML 依然报错，再考虑加非法字符过滤
-                    # 绝大多数情况下，strip 后的普通文本不会导致 XML 崩溃
-                    ET.SubElement(prog, "desc", lang="ja").text = desc_text.strip()
-            
-            # 5. 备注（已根据建议注释掉，减少文件体积）
-            # ET.SubElement(prog, "remark").text = "cached_item"
+            # 因为抓取时已经洗干净了，这里直接写入
+            desc_val = p.get('desc', '')
+            if desc_val:
+                ET.SubElement(prog, "desc", lang="ja").text = desc_val
             
 
-        # 3. 内存排序 (这是最有效率的方式)
+        # 3. 内存排序
         channels = root.findall('channel')
         programmes = root.findall('programme')
         programmes.sort(key=lambda x: (x.get('channel', ''), x.get('start', '')))
