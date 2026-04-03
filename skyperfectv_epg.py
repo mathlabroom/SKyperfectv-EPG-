@@ -241,6 +241,7 @@ class SkyPerfectUltimate:
     def run(self):
         file_name = "epg_ultimate.xml" 
         start_time = time.time()
+        icon_base = "https://www.skyperfectv.co.jp/library/common/img/channel/icon/premium/m_{}.gif"
         ref_to_id = {v[0].rstrip(':').upper(): k for k, v in CHANNELS_MAP.items()}
         all_progs = []
         count = 0
@@ -268,6 +269,11 @@ class SkyPerfectUltimate:
         for ch_num, (ref, name) in CHANNELS_MAP.items():
             chan = ET.SubElement(root, "channel", id=f"CH.{ch_num}")
             ET.SubElement(chan, "display-name").text = name
+            
+            # 🎯 自动合成频道图标 URL
+            # 假设 ch_num 是 '528' 这种字符串或数字
+            channel_icon_url = icon_base.format(ch_num)
+            ET.SubElement(chan, "icon", src=channel_icon_url)
         
         # --- ✨ 简化后的 programme 节点生成 ---
         for p in all_progs:
