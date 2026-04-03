@@ -88,10 +88,13 @@ class SkyPerfectUltimate:
             return (start_dt.strftime("%Y%m%d%H%M00 +0900"), end_dt.strftime("%Y%m%d%H%M00 +0900"))
         except: return None, None
 
-    def fetch_detail(self, url, srv_ref, referer):
-        # 1. 增量对比：如果 URL 在缓存中，直接返回
+    def fetch_detail(self, url, srv_ref, referer, icon_url=None):
         if url in self.cache:
             data = self.cache[url].copy()
+            # 如果旧缓存没图片，这次顺便补上
+            if icon_url and 'icon' not in data:
+                data['icon'] = icon_url
+                with self.lock: self.cache[url]['icon'] = icon_url
             data['ref'] = srv_ref
             return data
 
@@ -140,7 +143,13 @@ class SkyPerfectUltimate:
             # 仅保留可打印字符，彻底防止 Enigma2 报错
             clean_desc = "".join(c for c in clean_desc if c.isprintable() or c in "\n\r\t")
             
-            result = {'title': title, 'desc': clean_desc, 'start': start_xml, 'stop': stop_xml}
+            result = {
+            'title': title, 
+            'desc': clean_desc, 
+            'start': start_xml, 
+            'stop': stop_xml,
+            'icon': icon_url  # 🎯 存入图片
+        }
             
             # --- 线程安全地写入缓存 ---
             with self.lock:
@@ -153,37 +162,53 @@ class SkyPerfectUltimate:
     def fetch_channel(self, ch_num, srv_ref, name):
         url = f"{self.base_url}/program/schedule/premium/channel:{ch_num}/"
         progs = []
-        # 实时告知开始抓取
         print(f"⏳ 正在同步: {name:<20} (ID: {ch_num})", flush=True)
         
         try:
             res = self.session.get(url, timeout=15)
             soup = BeautifulSoup(res.text, 'lxml')
             
-            # 提取详情页链接
-            links = list(set([l.get('href') for l in soup.find_all('a', href=re.compile(r'/program/detail/'))]))
-            total_links = len(links)
-            
-            # 统计命中情况
+            # 1. 查找所有节目容器
+            items = soup.find_all('li', class_='p-program__item')
+            total_items = len(items)
             cached_count = 0
             
-            # 嵌套多线程抓取详情
             with ThreadPoolExecutor(max_workers=10) as executor:
-                # 注意：这里我们稍微修改逻辑，以便统计缓存
                 futures = []
-                for h in links:
-                    full_url = self.base_url + h
+                # 记录已处理的 URL，防止同一页面有重复链接
+                seen_urls = set()
+                
+                for item in items:
+                    a_tag = item.find('a', class_='p-program__link')
+                    if not a_tag: continue
+                    
+                    href = a_tag.get('href')
+                    full_url = self.base_url + href
+                    
+                    if full_url in seen_urls: continue
+                    seen_urls.add(full_url)
+
+                    # 🎯 提取图片链接
+                    img_tag = item.find('img', class_='js-program_thumbnail')
+                    icon_url = img_tag.get('data-lazysrc') if img_tag else None
+
+                    # 2. 检查缓存
                     if full_url in self.cache:
                         cached_count += 1
-                    futures.append(executor.submit(self.fetch_detail, full_url, srv_ref, url))
+                        # 如果缓存里没图片但现在有了，更新它（可选）
+                        if icon_url and 'icon' not in self.cache[full_url]:
+                            with self.lock:
+                                self.cache[full_url]['icon'] = icon_url
+                    
+                    # 3. 提交任务（fetch_detail 内部会处理缓存命中逻辑）
+                    futures.append(executor.submit(self.fetch_detail, full_url, srv_ref, url, icon_url))
                 
                 for f in as_completed(futures):
                     res_data = f.result()
                     if res_data:
                         progs.append(res_data)
             
-            # 实时输出该频道的总结
-            new_fetched = total_links - cached_count
+            new_fetched = len(seen_urls) - cached_count
             print(f"✅ {name:<20} | 总计: {len(progs):>2} | 缓存: {cached_count:>2} | 新抓: {new_fetched:>2}", flush=True)
             
         except Exception as e:
@@ -255,6 +280,9 @@ class SkyPerfectUltimate:
             prog = ET.SubElement(root, "programme", channel=short_id, start=p['start'], stop=p['stop'])
             ET.SubElement(prog, "title", lang="ja").text = p['title'].strip() if p['title'] else ""
 
+            # 🎯 插入图标节点
+            if p.get('icon'):
+                ET.SubElement(prog, "icon", src=p['icon'])
             # 因为抓取时已经洗干净了，这里直接写入
             desc_val = p.get('desc', '')
             if desc_val:
