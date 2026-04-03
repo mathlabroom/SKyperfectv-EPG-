@@ -4754,11 +4754,6 @@
     <title lang="ja">GSTVリピート放送</title>
     <desc lang="ja">人気のあった商品をアンコール放送！  ※放送スケジュールはやむをえず変更させていただくことがございます。ご了承下さい。</desc>
   </programme>
-  <programme channel="CH.528" start="20260403164000 +0900" stop="20260403165500 +0900">
-    <title lang="ja">セレスタショッピング</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/13086/S_ab9f4cb493e042099d2a9da941d6f5ce_20250605110908182.png" />
-    <desc lang="ja">【受付番号】</desc>
-  </programme>
   <programme channel="CH.528" start="20260403165500 +0900" stop="20260403170000 +0900">
     <title lang="ja">ショッピングアワー</title>
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/13086/S_ab9f4cb493e042099d2a9da941d6f5ce_20250605110908182.png" />
@@ -24706,10 +24701,6 @@ CNNラヘル・ソロモンがお送りする朝一番のニュース・ワイ�
     <title lang="ja">走遍中国 [再]</title>
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/6839/S_dc1135eee855456ca565c20f8b56b800_20250512144109456.jpg" />
     <desc lang="ja">以人文視角聚焦中国最新変化，関注普通中国人身辺的新現象、新風尚、新事物，反映当代中国人的生活状態、思想観念和精神追求。</desc>
-  </programme>
-  <programme channel="CH.570" start="20260403165000 +0900" stop="20260403165500 +0900">
-    <title lang="ja">テイク・ファイブ</title>
-    <desc lang="ja">癒しのひと時をお楽しみください。</desc>
   </programme>
   <programme channel="CH.570" start="20260403165500 +0900" stop="20260403170000 +0900">
     <title lang="ja">ビズ・レコ</title>
@@ -52646,11 +52637,6 @@ WilliamとEstが、ドラマの魅力をたっぷりお届けします。
     <desc lang="ja">癒しの猫映像と音楽でホッとひと息。
 見れば気持ちが整う「Cat Time」をお楽しみください。</desc>
   </programme>
-  <programme channel="CH.620" start="20260403160000 +0900" stop="20260403165500 +0900">
-    <title lang="ja">ブルーイ#35-36[ニ]★春休み特別放送</title>
-    <desc lang="ja">#35「ヘリコプターごっこ / タコさんあそび / あかちゃんレース」、#36「モンキーパンツ / タイプライター / ハンバーガーやさん」
-【番組情報】6歳と4歳の子犬の姉妹ブルーイとビンゴは遊ぶことが大好き。いつも元気で好奇心旺盛なブルーイは毎日の日常を最高のアドベンチャーに変える天才！想像力豊かに、身近なものから夢中になれる楽しい遊びを発見し、遊びを通して相手を思いやる気持ちやコミュニケーションの大切さを学んでいく。ささやかな日常を素敵な一日に変えてしまう仲良し家族の物語。楽しく優しい気持ちになれるオーストラリア発のアニメーション・シリーズ。</desc>
-  </programme>
   <programme channel="CH.620" start="20260403165500 +0900" stop="20260403170000 +0900">
     <title lang="ja">ミッキーマウス！#53[ニ]</title>
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/5192/S_1624cd9c13cb451aa54cbc2dbe032372_20250508125210980.jpg" />
@@ -77140,13 +77126,6 @@ S3 第10話：猟人荘の怪事件[終]
 【【番組詳細】】かつて社交界で名を馳せたイザベルと釣り仲間のマーガレットとの間で諍いが。一方、キースは妻の不貞を知り、激怒していた。その矢先、川で後頭部を殴打された男女の死体が発見される。2人は同じ理由で殺されたのか？殺人を目撃し、巻き添えとなったのか？
 出演：ジョン・ネトルズほか
 原作：キャロライン・グレアム</desc>
-  </programme>
-  <programme channel="CH.650" start="20260403160000 +0900" stop="20260403165500 +0900">
-    <title lang="ja">トランスポーター ザ・シリーズ [字] #10</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/17159/S_5cb283451cf14cec9944ca774910d205_20250702104855254.jpg" />
-    <desc lang="ja">第10話「すり替えられた名画」
-リュック・ベッソンの大ヒット映画「トランスポーター」をドラマ化。圧巻のカーチェイスと、体を張ったアクションは必見！
-【</desc>
   </programme>
   <programme channel="CH.650" start="20260403165500 +0900" stop="20260403175000 +0900">
     <title lang="ja">トランスポーター ザ・シリーズ [字] #11</title>
