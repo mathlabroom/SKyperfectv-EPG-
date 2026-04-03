@@ -2,12 +2,15 @@ name: Auto Update EPG
 
 on:
   schedule:
-    - cron: '0 19 * * *' # 每天北京时间凌晨3点运行（19:00 UTC）
-  workflow_dispatch:      # 允许手动点击运行按钮
+    - cron: '0 19 * * *' # 每天北京时间凌晨3点
+  workflow_dispatch:      # 允许手动运行
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions: # 赋予 Action 推送代码的权限
+      contents: write
+      
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,48 +30,51 @@ jobs:
         uses: actions/cache/restore@v3
         with:
           path: epg_cache.json
-          # 使用固定的 key 前缀，尝试匹配最近的一次缓存
           key: ${{ runner.os }}-epg-cache-
           restore-keys: |
             ${{ runner.os }}-epg-cache-
 
       - name: Run EPG Scraper
         env:
-        # 将 GitHub 仓库变量映射到系统环境变量
           CHANNELS_JSON: ${{ vars.CHANNELS_JSON }}
-        # ！！！注意：这里确保文件名和你仓库里的 python 文件名完全一致 ！！！
         run: python skyperfectv_epg.py 
 
       # --- 关键：保存更新后的缓存 ---
       - name: Save EPG Cache
         uses: actions/cache/save@v3
-        if: always() # 确保即使脚本部分报错也能保存已抓取的缓存
+        if: always() 
         with:
           path: epg_cache.json
-          # 使用 run_id 确保每次运行都能生成一个新的缓存节点
           key: ${{ runner.os }}-epg-cache-${{ github.run_id }}
 
+      # --- 步骤 1：发布到 Artifacts (方便手动下载) ---
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SPTV-EPG-Pack
+          path: |
+            epg_ultimate.xml.gz
+            posters.zip
+          retention-days: 1
+
+      # --- 步骤 2：提交到仓库 (方便机顶盒直接 wget/git pull) ---
       - name: Commit and Push
         run: |
-          # 1. 配置 Git 信息
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-          # 2. 检查关键文件是否存在
-          if [ ! -f "epg_ultimate.xml" ]; then
-            echo "Error: epg_ultimate.xml not found!"
+          # 检查文件
+          if [ ! -f "epg_ultimate.xml.gz" ]; then
+            echo "Error: epg_ultimate.xml.gz not found!"
             exit 1
           fi
 
-          # 3. 添加所有更改（包含 .xml 和 .gz）
+          # 建议：不要把 posters.zip commit 进仓库（文件太大且变动频繁）
+          # 只 commit EPG 文件，海报通过上面的 Artifacts 下载或者放在 Release
           git add epg_ultimate.xml epg_ultimate.xml.gz
 
-          # 4. 只有在有变动时才进行后续操作
           if ! git diff --staged --quiet; then
             git commit -m "Daily EPG Update (Incremental)"
-            
-            # 5. 使用 rebase 解决远程冲突，并推送到 main
-            # 如果 push 失败，尝试重试 3 次，增加稳定性
             for i in {1..3}; do
               git pull --rebase origin main && git push origin main && break || sleep 5
             done
