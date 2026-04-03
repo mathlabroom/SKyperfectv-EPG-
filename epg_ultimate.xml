@@ -4715,21 +4715,6 @@
     <title lang="ja">GSTVリピート放送</title>
     <desc lang="ja">人気のあった商品をアンコール放送！  ※放送スケジュールはやむをえず変更させていただくことがございます。ご了承下さい。</desc>
   </programme>
-  <programme channel="CH.528" start="20260403220000 +0900" stop="20260403221500 +0900">
-    <title lang="ja">セレスタショッピング</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/13086/S_ab9f4cb493e042099d2a9da941d6f5ce_20250605110908182.png" />
-    <desc lang="ja">【受付番号】</desc>
-  </programme>
-  <programme channel="CH.528" start="20260403221500 +0900" stop="20260403223000 +0900">
-    <title lang="ja">セレスタショッピング</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/13086/S_ab9f4cb493e042099d2a9da941d6f5ce_20250605110908182.png" />
-    <desc lang="ja">【受付番号】</desc>
-  </programme>
-  <programme channel="CH.528" start="20260403223000 +0900" stop="20260403224500 +0900">
-    <title lang="ja">セレスタショッピング</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/13086/S_ab9f4cb493e042099d2a9da941d6f5ce_20250605110908182.png" />
-    <desc lang="ja">【受付番号】</desc>
-  </programme>
   <programme channel="CH.528" start="20260403224500 +0900" stop="20260403230000 +0900">
     <title lang="ja">セレスタショッピング</title>
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/13086/S_ab9f4cb493e042099d2a9da941d6f5ce_20250605110908182.png" />
@@ -14832,14 +14817,6 @@
 【シリーズ名】「夢寄席」～笑活ヨセ女はじめました～
 【出演者】桂三若</desc>
   </programme>
-  <programme channel="CH.544" start="20260403220000 +0900" stop="20260403223000 +0900">
-    <title lang="ja">四国　歩き遍路の旅 #21</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/40062/S_85af95e13fc54208b7d4cdd1f5840816_20251105093506175.jpg" />
-    <desc lang="ja">四国霊場八十八ヶ所の寺を歩いて回る旅。距離にして約１２００ｋｍ、徒歩では５０日以上かかる過酷な歩き遍路をご紹介します。第２１話「愛媛県３」２０１８年制作
-【番組内容1/2】弘法大師が自身と人々の厄難を除くために開いたとされる四国霊場。八十八ヶ所の霊場をまわれば煩悩が消え、願いが叶うと言われています。距離にして約１，２００ｋｍ、徒歩では５０日以上はかかるといわれる歩き遍路。役立つ情報やＨＯＷＴＯも随所でご案内。歩き遍路は行きたいけれど、難しいと言う方に主観映像で実際に歩いている気分になれるようスタビライザーカメラで紹介します。
-【番組内容2/2】第２１話愛媛県３
-今回は愛媛県、４３番札所への道のりから。遍路道の歯長峠は土砂崩れのため通行止めになっていたため迂回を選択せざるをえない。雨が降るなか４３番札所・明石寺に到着。明石寺は６世紀に千手観音菩薩像を祀るため開創された。そして宇和島街道の要所だった番所跡を通り、別格８番札所・十夜ヶ橋へ。弘法大師が橋の下で一夜を過ごしたという。ご朱印も頂き、いざ４４番へ。２０１８年制作</desc>
-  </programme>
   <programme channel="CH.544" start="20260403223000 +0900" stop="20260403230000 +0900">
     <title lang="ja">四国　歩き遍路の旅 #22</title>
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/40062/S_85af95e13fc54208b7d4cdd1f5840816_20251105093506175.jpg" />
@@ -17018,11 +16995,6 @@ Episode 10 ダチョウレース
 【番組内容 2/2】Episode 7 日本の雄川の滝
 秘密の水遊び場に飛び込んで、びしょぬれになって楽しもう！今回のエピソードでは、日本にある多層の滝や、ハワイの崖っぷちにあるアクション満載のパラダイス、世界最大のブラジルの滝など、大満足できる各国の穴場水遊びスポットを紹介する。
 （原題：Top Secret Swimming Holes (Season 3)）日本語吹替</desc>
-  </programme>
-  <programme channel="CH.546" start="20260403220000 +0900" stop="20260403223000 +0900">
-    <title lang="ja">鉄道で巡る美しき工場夜景の世界 #4</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/5684/S_43ebe331ed8b4b8fb3f9b879e7f2877a_20250508165835459.jpg" />
-    <desc lang="ja">今回は日本新三大夜景を求めて北九州にある皿倉山ケーブルカーに乗車。さらに珍しいスロープカーにも乗車して山頂へ到達。美しい夕景と夜景を撮影する。</desc>
   </programme>
   <programme channel="CH.546" start="20260403223000 +0900" stop="20260403230000 +0900">
     <title lang="ja">しおねるの鉄道幸せ美食旅 #6</title>
@@ -19594,18 +19566,6 @@ Episode 10 ダチョウレース
   <programme channel="CH.565" start="20260410033000 +0900" stop="20260410040000 +0900">
     <title lang="ja">[英]ワールド・トゥデイ</title>
     <desc lang="ja">世界各地からBBCのジャーナリズムをお届けする。</desc>
-  </programme>
-  <programme channel="CH.566" start="20260403220000 +0900" stop="20260403224500 +0900">
-    <title lang="ja">[ニ]Connect The World</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/46576/S_5ffe36ee8bcd40b590862d59f83a8670_20251208115020815.jpg" />
-    <desc lang="ja">日本語同時通訳付。
-1日の世界の動きをこの番組でキャッチアップ！CNNインターナショナルきっての女性キャスター、ベッキー・アンダーソンが送る国際ニュースです。
-【[字]】6時～24時の間、英語字幕放送サービスを実施しています（一部対象外の番組あり）。
-お手持ちのリモコンの字幕ボタンで、表示/非表示の切り換えができます。
-【番組詳細】日本語同時通訳付。
-1日の世界の動きをこの番組でキャッチアップ！CNNインターナショナルきっての女性キャスター、数々の世界の要人、セレブへのインタビュー経験を持つベッキー・アンダーソンが送る国際ニュースです。
-【ホームページ】http://www.jctv.co.jp/cnnj/
-【最新情報】X（旧Twitter）でCNNj番組最新情報をチェック@jctv_pr</desc>
   </programme>
   <programme channel="CH.566" start="20260403224500 +0900" stop="20260403230000 +0900">
     <title lang="ja">World Sport</title>
@@ -22868,11 +22828,6 @@ CNNラヘル・ソロモンがお送りする朝一番のニュース・ワイ�
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/46607/S_ce155e7bd26c408289b8e9945c12e554_20251208120017008.jpg" />
     <desc lang="ja">アメリカと世界の最新ニュースを、アナリストの解説やコメンテーターの意見を交えながら、わかりやすくお伝えします。
 【番組詳細】アメリカと世界の最新ニュースを、アナリストの解説やコメンテーターの意見を交えながら、わかりやすくお伝えします。</desc>
-  </programme>
-  <programme channel="CH.568" start="20260403220000 +0900" stop="20260403223000 +0900">
-    <title lang="ja">中国新聞</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/6788/S_3957124da0874aa6b9b4ab854bef0685_20250512141843335.jpg" />
-    <desc lang="ja">欄目宗旨是向全球華人傳遞最新、最快、最權威的新聞資訊。</desc>
   </programme>
   <programme channel="CH.568" start="20260403223000 +0900" stop="20260403230000 +0900">
     <title lang="ja">今日関注</title>
@@ -29588,12 +29543,6 @@ QPプロことティーチングプロの関雅史プロとカリスマクラブ
     <desc lang="ja">シーズン5を迎える「プレメンレッスン！」。今回はツアープロ、３児のママプロゴルファーでもある中村香織のメソッドをお届け。
 【番組内容】今回のコーチは、ツアープロでもある中村香織。３児のママプロゴルファーでもある中村は2007年にプロテストに合格し、ステップアップツアーでは３勝を挙げた。2015年にツアーから一時離れて、2017年から都内でレッスン活動を行っている。2023年からは、レッスンを行いながら再びツアー復帰を目指してマンデートーナメントにもチャレンジしている中村香織のメソッドを紹介します。</desc>
   </programme>
-  <programme channel="CH.602" start="20260403173000 +0900" stop="20260403223000 +0900">
-    <title lang="ja">[生] GAORAプロ野球中継 北海道日本ハムvsオリックス(4.3)</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/63784/S_aae2efcaf7644dd2b54e55f9cc29487b_20260313112315835.jpg" />
-    <desc lang="ja">（延長時、以降の番組変更繰り下げあり）
-解説:鶴岡慎也／実況:土井悠平</desc>
-  </programme>
   <programme channel="CH.602" start="20260403223000 +0900" stop="20260404030000 +0900">
     <title lang="ja">GAORAプロ野球中継 北海道日本ハムvsオリックス(4.3)</title>
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/63784/S_aae2efcaf7644dd2b54e55f9cc29487b_20260313112315835.jpg" />
@@ -30893,15 +30842,6 @@ XやInstagramでも番組情報を発信中！
 X:@gaora_senden/Instagram:@gaora_sports
 公式PRキャラクター「ガオやん」
 https://www.gaora.co.jp/gaoyan/</desc>
-  </programme>
-  <programme channel="CH.603" start="20260403220000 +0900" stop="20260403224500 +0900">
-    <title lang="ja">MLBイッキ見！#2</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/14438/S_5e1d7b52b5d545adb11a195a56223f72_20250609123503848.jpg" />
-    <desc lang="ja">知っているとMLB中継が2倍楽しくなる情報をお届け！
-(#2 2026年4月3日初回放送)
-ゲスト：藪恵壹
-コメンテーター：AKI猪瀬
-MC：津田麻莉奈</desc>
   </programme>
   <programme channel="CH.603" start="20260403224500 +0900" stop="20260403230000 +0900">
     <title lang="ja">インフォメーション</title>
@@ -33591,17 +33531,6 @@ SKE48の荒野姫楓さんが世界最大の自転車レース、
 野球のプロとアマチュアが「結束」し「世界最強」を目指して常設化された侍ジャパン。
 この番組ではトップチームはもちろん、大学・高校・U15・U12・女子など各カテゴリーの代表にも焦点をあてて、侍ジャパンの情報を毎月お届け！</desc>
   </programme>
-  <programme channel="CH.606" start="20260403213000 +0900" stop="20260403221500 +0900">
-    <title lang="ja">[無料]高円宮杯 JFA U-18 サッカープレミアリーグ2026 ナビ</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/64417/S_2066b1886f3c41ff8f2c799fa7f3999a_20260326134220892.JPG" />
-    <desc lang="ja">今シーズンの見どころを“育成年代大好きおじさん”達が語りつくします。
-出演者：名良橋晃、ワッキー(ペナルティ)、原大悟
-【番組内容】高校年代サッカー最高峰の戦いがいよいよ4/4(土)に開幕。
-昨シーズン史上初のユース3冠を果たした鹿島アントラーズユースの連覇なるか！？今シーズンの見どころを“育成年代大好きおじさん”達が語りつくします。
-【番組内容】そして、名良橋さんがプレミア初挑戦となるベガルタ仙台ユースに直撃取材。
-さらに、ワッキーさんは昨シーズンの高体連タイトル夏冬連覇の神村学園高等部に潜入！
-その他、今シーズンのプレミアリーグ注目選手もご紹介します！</desc>
-  </programme>
   <programme channel="CH.606" start="20260403221500 +0900" stop="20260403230000 +0900">
     <title lang="ja">[無料]まるっとバレーボール ～大同生命SVリーグ情報番組～#21</title>
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/45953/S_33693a808fdf47a694a916d43d4e5c49_20251204114124565.jpg" />
@@ -34645,17 +34574,6 @@ SSはターマック(舗装路)、グラベル(未舗装路)、スノーなど�
     <title lang="ja">サッカーニュース Foot!超高校サッカー通信(4/9)</title>
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/14462/S_ae0cdcfc8a5948eba151b6b40c263670_20250609125347372.jpg" />
     <desc lang="ja">高円宮杯U-18プレミアリーグの注目試合のハイライトを中心に“超高校級”の選手たちが日本一を懸けて戦う大会の魅力をたっぷりと伝えます！</desc>
-  </programme>
-  <programme channel="CH.607" start="20260403220000 +0900" stop="20260403221500 +0900">
-    <title lang="ja">浜崎 未来プロの練習を覗いてみた。</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/62759/S_907d74f693934894a5c82938fb2a1b32_20260309101824803.jpg" />
-    <desc lang="ja">浜崎 未来プロ</desc>
-  </programme>
-  <programme channel="CH.607" start="20260403221500 +0900" stop="20260403223000 +0900">
-    <title lang="ja">ゴルフギアQ</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/5671/S_c199ca8f3b324b33bf7fbfc8cd5d9d9f_20250508165121221.jpg" />
-    <desc lang="ja">年間試打本数2000本以上、ゴルフ誌で活躍のクラブフィッター鹿又芳典がドライバーからウェッジまで、クラフトマンシップ溢れる
-ギアを紹介</desc>
   </programme>
   <programme channel="CH.607" start="20260403223000 +0900" stop="20260403230000 +0900">
     <title lang="ja">トラリンクTV #19</title>
@@ -35705,17 +35623,6 @@ WBCの振り返りや今年の阪神どうなの？など、プロ野球ファ�
     <desc lang="ja">#1生まれ変わったMIZUNO NEW SWING DNAとは？▽出演：小林正則プロ、岡田圭右（ますだおかだ）、伊藤みく
 【番組内容】プロの技・最新理論とゴルフクラブなどの用品がコラボした、画期的なレッスン番組が帰ってきた！ゴルフ歴、経験値もパワーアップした岡田圭右さんがどのようなプレーを見せてくれるのか！？今回の舞台は兵庫県、よみうりカントリークラブ。距離を飛ばすだけでなく、戦略的な思考と正確なショットが求められる、挑戦しがいのあるコースで、小林正則プロ、伊藤みくさんと一緒に「パァ！」っと、元気いっぱいお届けする。
 【出演者】小林正則、岡田圭右、伊藤みく</desc>
-  </programme>
-  <programme channel="CH.608" start="20260403214500 +0900" stop="20260403221500 +0900">
-    <title lang="ja">[無料]ジータスショッピング</title>
-    <desc lang="ja">各種インフォメーションをお届けしております</desc>
-  </programme>
-  <programme channel="CH.608" start="20260403221500 +0900" stop="20260403224500 +0900">
-    <title lang="ja">シューイチ アスリート熱ケツ情報 868[再]</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/63523/S_5c8d4ca1218e41eea0decc1d4703c76a_20260311151137037.jpg" />
-    <desc lang="ja">「キャンプ事件簿 後編／キャンプ事件簿 前編」
-熱ケツ情報がパワーアップ！ジャイアンツ選手に加え様々なアスリートも登場！？
-【番組内容】地上波では放送できなかったあのネタ、このネタが満載！普段は見られないアスリートの素顔を見ることができます！</desc>
   </programme>
   <programme channel="CH.608" start="20260403224500 +0900" stop="20260404030000 +0900">
     <title lang="ja">DRAMATIC BASEBALL 2026 巨人×DeNA 東京ドーム</title>
@@ -46491,15 +46398,6 @@ ATEEZ、IVE、CIX、BAE173
 【制作】2019
 【出演者】逢田梨香子、渋谷彩乃、北原沙弥香</desc>
   </programme>
-  <programme channel="CH.617" start="20260403221000 +0900" stop="20260403223000 +0900">
-    <title lang="ja">吉田類の酒場放浪記 #810「中神『とり中』」</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/30690/S_87da46b1401c4380864bad669605c797_20250929172405770.JPG" />
-    <desc lang="ja">イラストレーター・吉田類が東京の下町を中心に酒場を紹介。古きよき名店や、個性豊かな酒と料理など、下町ならではの心温まる風景をお届けする。
-【出演者】吉田類
-【番組内容】#810「中神『とり中』」東京の下町を中心に“大人がひとりでぶらっと立ち寄れる”酒場を紹介する異色の立ち飲み紀行番組。古きよき名店や、個性豊かな酒と料理、店主と常連客の会話など、下町ならではの心温まる風景をイラストレーター吉田類の飲みっぷりと共に、お届けする。
-【制作】BS－TBS
-【出演者】吉田類</desc>
-  </programme>
   <programme channel="CH.617" start="20260403223000 +0900" stop="20260403230000 +0900">
     <title lang="ja">クイズダービー #636</title>
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/30689/S_4f7a3131a4ed4de4a420ef9780cbd39a_20250929172405053.jpg" />
@@ -49559,10 +49457,6 @@ Highlight、キム・ジョンヒョン、VICTON、VERIVERY、ユア(OH MY GIRL)
 【詳細１】今回は、ストレス解消におすすめ！ヨガの代表的なポーズの「太陽礼拝」を行っていきます。ひと呼吸、ひと動作で、呼吸に合わせて動く「太陽礼拝」は、体の引き締め・ストレス解消・体の柔軟性アップに効果的です。今日もヨガを通して心と体をリフレッシュさせていきましょう。／出演：矢野冬子、ゲスト：原つむぎ／２９分
 【出演者】矢野冬子、原つむぎ</desc>
   </programme>
-  <programme channel="CH.619" start="20260403220000 +0900" stop="20260403223000 +0900">
-    <title lang="ja">[無料]プラス!ショッピング</title>
-    <desc lang="ja">毎日の暮らしに「プラス!」な情報を。ショッピング番組。</desc>
-  </programme>
   <programme channel="CH.619" start="20260403223000 +0900" stop="20260403230000 +0900">
     <title lang="ja">近藤真彦&amp;今井翼 男ふたりの青春旅inベトナム #3</title>
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/60297/S_b26b44f8f6044fbeb5df283204717d23_20260303115152244.jpg" />
@@ -52195,17 +52089,6 @@ WilliamとEstが、ドラマの魅力をたっぷりお届けします。
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/61146/S_c29acd2a686347c482b0efb508e1744d_20260304130115444.jpg" />
     <desc lang="ja">冒険者ライオスは、妹を助けるため、迷宮内で食糧を調達する”自給自足”を決意。襲い来る魔物たちを食べながらダンジョン踏破を目指す！#13「炎竜３/良薬」ほか
 【番組情報】ダンジョン深奥で、レッドドラゴンに妹が喰われた！命からがら地上へ生還した冒険者のライオス。再びダンジョンへ挑もうとするも、お金や食糧は迷宮の奥底…。妹が消化されてしまうかもしれない危機的な状況の中、ライオスは決意する。「食糧は、迷宮内で自給自足する！」スライム、バジリスク、ミミック、そしてドラゴン！襲い来る魔物たちを食べながらダンジョン踏破を目指せ、冒険者よ！</desc>
-  </programme>
-  <programme channel="CH.621" start="20260403221000 +0900" stop="20260403224000 +0900">
-    <title lang="ja">縦型ショートドラマ「平成みたいだ」　令和に大バズりだＳＰ</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/61187/S_bbb6fa222bbf496fa85e4090649ad7c1_20260304132403062.jpg" />
-    <desc lang="ja">ＳＮＳ累計１億回再生突破！令和に大バズり中の『平成みたいだ』が豪華“平成代表”ゲストと贈るスペシャル番組
-【みどころ】２０２５年７月の配信開始から約半年でＳＮＳ累計１億回再生を突破した大人気縦型ショートドラマ『平成みたいだ』。そのバズの秘密に迫るスペシャル番組を放送・配信。
-平成の男子高校を舞台に、学ランや流行ファッションなど“あの頃の風景”を描き話題を呼ぶ本作。番組では主演キャストによるトークに加え、“平成代表”の豪華ゲストを迎えた撮り下ろしショートドラマを披露する。ゲストには、お笑いコンビ・北陽（虻川美穂子・伊藤さおり）、俳優・脇知弘、元ＡＫＢ４８・北原里英が出演。“令和代表”ショートドラマ俳優陣と“平成代表”ゲストが共演し、男子高と女子高による対抗バトルを軸に、恋とプライドが交錯する平成テイスト全開の物語を展開する。さらに、令和チームＶＳ平成チームによる世代対抗クイズ企画も実施。流行語やカルチャーを巡る白熱バトルで、懐かしさと新しさが交差する。
-平成をリアルタイムで生きた世代にも、令和世代にも刺さる、笑って楽しめるスペシャルプログラム！
-【出演】光島叶倭、ななし。、ゆーひ、植村颯太、久保軒松 from イケメンズ
-【特別ゲスト】虻川美穂子（北陽）、伊藤さおり（北陽）、脇知弘、北原里英
-【出演者】光島叶倭、ななし。、ゆーひ、植村颯太、久保軒松 from イケメンズ、虻川美穂子、伊藤さおり、脇知弘、北原里英</desc>
   </programme>
   <programme channel="CH.621" start="20260403224000 +0900" stop="20260403230000 +0900">
     <title lang="ja">カリー・ウェブのゴルフ塾　フェアウェイウッド／ハイブリッドのテクニック</title>
@@ -57069,18 +56952,6 @@ Chage
 【原題】EMMANUELLE（2024）
 【ストーリー】ホテルの品質調査の仕事をするエマニュエルは、オーナー企業からの依頼で香港の高級ホテルに滞在して査察することに。サービスも設備もほぼ完璧で、彼女は最高評価の報告書を提出する。しかしオーナーは経営陣のマーゴを懲戒解雇する理由を見つけるため、エマニュエルにマーゴの粗探しを命じるのだった。ホテルの裏側を調べ始めた彼女は、怪しげな宿泊客や関係者たちと交流を重ねる中で、自身の内なる欲望を解放させていく…。
 【出演者】オードレイ・ディヴァン、ノエミ・メルラン、ウィル・シャープ、ジェイミー・キャンベル＝バウアー、チャチャ・ホアン、アンソニー・ウォン、山口菜乃花、村井雄治、石黒史剛、柚木尚子、及川いぞう</desc>
-  </programme>
-  <programme channel="CH.628" start="20260403211500 +0900" stop="20260403221500 +0900">
-    <title lang="ja">女優は語る 秋吉久美子 前編　▼インタビュアー：樋口尚文</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/52356/S_1f2bf27ca59a48069f318946a15ca45d_20260109135555945.jpeg" />
-    <desc lang="ja">【オリジナル番組】
-芸歴50年を超え、今なお現役で映画、テレビ、舞台などで活躍する女優・秋吉久美子の素顔に迫るトーク番組。
-2026年58分
-【番組内容】◆クミコが選ぶ、とっておきのクミコ～秋吉久美子秘蔵傑作選～◆
-芸歴50年を超え、今なお現役で映画、テレビ、舞台などで活躍する女優・秋吉久美子の素顔に迫るトーク番組。
-デビューから現在までの思い出を語るとともに、お気に入りの出演映画を紹介。
-聞き手には、秋吉久美子との共著もある映画評論家の樋口尚文。
-【出演者】秋吉久美子、樋口尚文</desc>
   </programme>
   <programme channel="CH.628" start="20260403221500 +0900" stop="20260403230000 +0900">
     <title lang="ja">落語◆五街道雲助「幾代餅」【TV初放送】</title>
@@ -67626,12 +67497,6 @@ MCは映画雑誌「ROADSHOW」の編集を経て、映画や演劇に関する�
     <desc lang="ja">今回はアイルランドで人気を誇る元ボクサーのアイリッシュ・フォーク・シンガー・ソングライター、ダミアン・デンプシーが登場。
 【番組内容】《曲目》 1. Rocky Road To Dublin2. Negative Vibes3. Singing All Our Cares Away4. Bustin Outta Here5. Ghosts Of Overdoses6. Almighty Love7. Party On
 【出演者】ダミアン・デンプシー</desc>
-  </programme>
-  <programme channel="CH.639" start="20260403220000 +0900" stop="20260403223000 +0900">
-    <title lang="ja">新譜紹介 New Order</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/6564/S_061b7da8e8824584a91153bba3512994_20250512095658939.jpg" />
-    <desc lang="ja">アーティストコメントと共に新着ミュージックビデオをお届け!
-www.mjtv.jp</desc>
   </programme>
   <programme channel="CH.639" start="20260403223000 +0900" stop="20260403230000 +0900">
     <title lang="ja">一緒に歌おう！歌詞有りMV vol.17～Mコレ</title>
@@ -79851,16 +79716,6 @@ S3 第10話：猟人荘の怪事件[終]
 【番組内容】＊人生に疲れた女性たちの心に響くトキメキシーン満載の純愛ストーリーで同時間帯視聴率1位を記録した話題作！＊スホ・ヘラと悪縁で繋がったシャロン役「愛の不時着」のソ・ジヘ、彼らと前世で繋がりのあるベッキ役「一緒に暮らしませんか？」のチャン・ミヒ、ヘラに密かに好意を抱いているゴン役「イカゲーム3」のパク・ソンフンら豪華脇役の名演も必見！
 【あらすじ】毎年クリスマスにスロベニアの古城を訪れるスホ（キム・レウォン）。ここは約束の地で、毎年スホはある人物を待っているのだった。一方、ヘラ（シン・セギョン）は検事の彼氏ジフン（キム・ヒョンジュン）の秘密を知ってしまい…。</desc>
   </programme>
-  <programme channel="CH.657" start="20260403211500 +0900" stop="20260403223000 +0900">
-    <title lang="ja">ドクター弁護士 #8</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/54745/S_8225099d17ce4a2cbe5eaaef3f6bc157_20260202115407683.jpg" />
-    <desc lang="ja">不条理な組織への華麗なる復讐劇が今、始まる――
-ソ・ジソブ主演の緊迫のメディカルサスペンス法廷ドラマ！
-全16話*日本語字幕放送*
-【出演者】ソ・ジソブ、シン・ソンロク、イム・スヒャン、イ・ギョンヨン、イ・ジュビン、イ・ドンハほか
-（制作年：2022）
-【番組内容】息子ジュンファンの状態が悪化すると、ジョンヒョンはイハンに手術を頼む。イハンはジェイデンとともに、ジュンファンをバンソク院から連れ出す作戦を立てる。一方のソギョンは、夜中にこっそりとバンソク院を訪れるミソンの素性を調べる。</desc>
-  </programme>
   <programme channel="CH.657" start="20260403223000 +0900" stop="20260404002000 +0900">
     <title lang="ja">ランニングマン #920▼クォン・ウンビ</title>
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/9746/S_6a78a20bb4974a03978bb19f4e5e0bfa_20250530171659693.jpg" />
@@ -85081,24 +84936,6 @@ Episode 14 ハリケーン被害からの復興
 【【視聴制限】】-
 【出演者】福田陽平、川居尚美、新津徳也、美濃良偲、中村義洋</desc>
   </programme>
-  <programme channel="CH.661" start="20260403210000 +0900" stop="20260403222000 +0900">
-    <title lang="ja">韓◆監査します＃７[字]【ノーカット】　▼シン・ハギュン、イ・ジョンハ</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/56243/S_2d1591767a20467ba1655e11ef1a2890_20260203151752361.jpg" />
-    <desc lang="ja">【ベーシック初】
-＃７「技術流出の真実を暴け」
-正反対な二人がタッグを組み、次々と不正を暴いていくオフィス捜査ドラマ！
-2024年62分全12話
-【監督・出演】演出：クォン・ヨンイル、チュ・サンギュ
-脚本：チェ・ミンホ、キム・ヨンガプ
-キム・ミヒョン
-出演：シン・ハギュン、イ・ジョンハ
-チン・グ、チョ・アラム
-【番組内容】冷血で“監査の神”と呼ばれる監査チームのチーム長シン・チャイルを演じるのは、「怪物」「悪人伝記」など数々の作品に出演する演技派俳優のシン・ハギュン。情に厚いお人好しの新入社員ク・ハンス役には、ドラマ「ムービング」で大ブレイクした俳優イ・ジョンハ。
-【番組内容】JU建設副社長で社長の座を狙うファン・デウンを「太陽の末裔」のチン・グ、ク・ハンスと同じ監査チームで新入社員のユン・ソジンをgugudan出身の女優チョ・アラムが演じる。
-【あらすじ】
-JU建設の新しい監査チーム長としてシン・チャイル(シン・ハギュン)が就任した。素早い決断力や他人を圧倒する話術・交渉能力を持ち、彼の監査のターゲットとなったら逃げられる者はいない。
-【番組内容】そんなチャイルは、情に厚い人情派の新入社員ク・ハンス(イ・ジョンハ)に「監査の仕事に向いていない」と一方的に異動宣言をする。「このまま異動はできない」と考えたハンスは、タワークレーン転倒事件を再調査し始めたチャイルと共に、監査の仕事に積極的に取り組み始める。ある日、現場所長のノートパソコンを調べようとするがトラブルが起きてしまい…。</desc>
-  </programme>
   <programme channel="CH.661" start="20260403222000 +0900" stop="20260403233000 +0900">
     <title lang="ja">韓◆監査します＃８[字]【ノーカット】　▼シン・ハギュン、イ・ジョンハ</title>
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/56243/S_2d1591767a20467ba1655e11ef1a2890_20260203151752361.jpg" />
@@ -89559,22 +89396,6 @@ TVシリーズ第二弾。八代将軍・徳川吉宗、人呼んで"暴れん�
     <desc lang="ja">【潰えた希望】一夜にして落ちぶれた名門一家の女性たちが、聡明なヒロイン・花シを中心に数々の困難を乗り越え、前向きに生き抜く姿を描く/2023年
 【番組内容】花シ（かし）は花蓉（かよう）の亡骸とともに帰宅、花（か）家は悲しみに包まれる。だが、皇都に護送された皓月仙師（こうげつせんし）は皇帝と取引きして天文院の天枢使の職を得ていたのだった。これに怒りを覚える花シは皓月仙師と対峙、雨乞いを邪魔したとして皇帝の前に引き出される。そこでも堂々と意見し皇帝の怒りを買った花シに運河補修を命じる聖旨が下り…。
 【出演者】フー・イーティエン、チャン・ジンイー、ウー・シーザー、ルー・ユーシアオ、ビエン・チョン、ハイ・イーティエンほか</desc>
-  </programme>
-  <programme channel="CH.667" start="20260403220000 +0900" stop="20260403223000 +0900">
-    <title lang="ja">正反対な君と僕 #12 [終]</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/51268/S_8751b9eb0fba4fbc915406f478b3d465_20260106164636283.jpg" />
-    <desc lang="ja">#12 ほいっぽ
-【全12話】2026年放送作品
-【＜ストーリー＞】いつも元気いっぱいだけど周りの目を気にしてしまう女子・鈴木と、物静かだけど自分の意見をしっかり言える男子・谷。正反対な二人がお互いを尊重し、ゆっくりと理解を深めていく姿と、友人たちとの学校生活を描くラブコメディ。
-【＜キャスト＞】鈴木：鈴代紗弓
-谷：坂田将吾
-渡辺：谷口夢奈
-佐藤：平林瑚夏
-山田：岩田アンジ
-東：島袋美由利
-平：加藤 渉
-西：大森こころ
-本田：楠木ともり</desc>
   </programme>
   <programme channel="CH.667" start="20260403223000 +0900" stop="20260403230000 +0900">
     <title lang="ja">[新]霧尾ファンクラブ #01 [字]</title>
@@ -97034,11 +96855,6 @@ TVアニメ『夏目友人帳』第六期！
 出演:市ノ瀬加那、矢野奨吾、高橋李依、根本京里、土岐隼一、八代拓、他
 原作:村田真優/制作:2025年/全12話</desc>
   </programme>
-  <programme channel="CH.672" start="20260403220000 +0900" stop="20260403223000 +0900">
-    <title lang="ja">おしゃれにナンシー・クランシー#45[二][字/日英]</title>
-    <desc lang="ja">お人形で遊ぶナンシーとブリー。しかし、人形同士が仲違いしてしまう。／サッカーに誘われたナンシー。苦い思い出があったが、友達の熱意に負けてサッカーに再挑戦する。
-【番組情報】女の子ナンシーは、おしゃれでファンシーなことが大好き。持ち前の想像力で、どんな普通のものでも自分らしく素敵に変身させます。親友のビリーと一緒に、ティーパーティーをしたりプレイハウスをデコレーションしたり、工夫して自分の欲しい世界を作り上げます。ときには失敗して思い通りにいかなくても、理想と現実の違いを受け止め、毎日を前向きに、ファンタスティックに変えていくナンシーの姿をコミカルに描きます。</desc>
-  </programme>
   <programme channel="CH.672" start="20260403223000 +0900" stop="20260403230000 +0900">
     <title lang="ja">ラプンツェル　ザ・シリーズ#9[二][字/日]</title>
     <desc lang="ja">カサンドラの様子がおかしい。後をつけたラプンツェルは、男性と会っているのを見つけた。張り切ったラプンツェルはダブルデートを提案する。相手の男性の名はアンドルー。
@@ -102994,15 +102810,6 @@ DCの国立アフリカ系アメリカ人歴史文化博物館、モントリオ
 ＊放送時間１４：３０～２１：３０
 【◎お問い合わせ】スカパー！カスタマーセンター /</desc>
   </programme>
-  <programme channel="CH.680" start="20260403220000 +0900" stop="20260403223000 +0900">
-    <title lang="ja">津 ＧⅠ レースダイジェスト</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/9235/S_f9794db8657f4d8fb0f1f14bf7e130d1_20250530110802000.jpg" />
-    <desc lang="ja">「津ＧⅠ」レースダイジェストをお送りします。
-【おしらせ】（番組内容に関するお問い合わせは）
-レジャーチャンネルサービスセンター
-０３－４５０３－６５５５
-受付時間／１０：００～１８：００（年中無休）</desc>
-  </programme>
   <programme channel="CH.680" start="20260403223000 +0900" stop="20260403230000 +0900">
     <title lang="ja">津　ＧⅠ　ウィナーインタビューダイジェスト</title>
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/9235/S_f9794db8657f4d8fb0f1f14bf7e130d1_20250530110802000.jpg" />
@@ -104679,15 +104486,6 @@ DCの国立アフリカ系アメリカ人歴史文化博物館、モントリオ
     <title lang="ja">からつ　ＧⅢ　レースダイジェスト</title>
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/9235/S_f9794db8657f4d8fb0f1f14bf7e130d1_20250530110802000.jpg" />
     <desc lang="ja">「からつＧⅢ」のレースダイジェストをお送りします。
-【おしらせ】（番組内容に関するお問い合わせは）
-レジャーチャンネルサービスセンター
-０３－４５０３－６５５５
-受付時間／１０：００～１８：００（年中無休）</desc>
-  </programme>
-  <programme channel="CH.681" start="20260403220000 +0900" stop="20260403223000 +0900">
-    <title lang="ja">芦屋　レースダイジェスト</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/9371/S_332542b052124d70a64064e2e47d7552_20250530122445057.jpg" />
-    <desc lang="ja">レースダイジェストをお送りします。
 【おしらせ】（番組内容に関するお問い合わせは）
 レジャーチャンネルサービスセンター
 ０３－４５０３－６５５５
@@ -108251,12 +108049,6 @@ DCの国立アフリカ系アメリカ人歴史文化博物館、モントリオ
 ０３－４５０３－６５５５
 受付時間／１０：００～１８：００（年中無休）</desc>
   </programme>
-  <programme channel="CH.688" start="20260403203000 +0900" stop="20260403223000 +0900">
-    <title lang="ja">参考レース＆重賞調教VTR（土曜開催分） #898</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/29483/S_74e60705d76540c48f3c306649702f0f_20250918191111506.png" />
-    <desc lang="ja">「ダービー卿CT、チャーチルダウンズC他」
-【番組内容】前日又は当日発売分の重賞競走等について、調教・参考レースのVTRを放送。</desc>
-  </programme>
   <programme channel="CH.688" start="20260403223000 +0900" stop="20260403230000 +0900">
     <title lang="ja">ザ・馬券DUEL WWW R #9[字]</title>
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/64004/S_9c666d811582457cbdd16635d4289605_20260324150658106.png" />
@@ -109325,16 +109117,6 @@ DCの国立アフリカ系アメリカ人歴史文化博物館、モントリオ
 ≪パドック解説≫
 【中山】前半：松本智志（競馬ブック）／後半：木村拓人（馬サブロー）
 【阪神】前半：大野英樹（中日スポーツ）／後半：米満浩生（競馬ブック）</desc>
-  </programme>
-  <programme channel="CH.690" start="20260403220000 +0900" stop="20260403222000 +0900">
-    <title lang="ja">岸和田 F1 第3日レースダイジェスト</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/13240/S_48b305bf6ada47dc913dcbecdb33b2a0_20250605152843551.jpg" />
-    <desc lang="ja">放映レースのダイジェスト</desc>
-  </programme>
-  <programme channel="CH.690" start="20260403222000 +0900" stop="20260403223500 +0900">
-    <title lang="ja">武雄 F2 第2日レースダイジェスト</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/13240/S_48b305bf6ada47dc913dcbecdb33b2a0_20250605152843551.jpg" />
-    <desc lang="ja">放映レースのダイジェスト</desc>
   </programme>
   <programme channel="CH.690" start="20260403223500 +0900" stop="20260403225500 +0900">
     <title lang="ja">京王閣 F1 第3日レースダイジェスト</title>
@@ -112346,13 +112128,6 @@ CH.947 チェリーボムHD   も楽しめちゃう！
 【出演者】♀：本真ゆり
 【番組内容】嫁の妊娠中でセックスが出来ず抜きありメンエスに…そこにいたのはなんと義母！あり得ない状況に困惑しつつグラマラスな肢体に我慢出来ず義母に生ハメ中●しまでしてしまう…！非日常なスリルにハマり堕ちていく禁断不倫！間違えた二人の関係はもう戻れない…(C)人妻花園劇場
 【出演者】本真ゆり</desc>
-  </programme>
-  <programme channel="CH.944" start="20260403210000 +0900" stop="20260403223000 +0900">
-    <title lang="ja">★上司と部下の妻12～その可愛らしい童顔が他人のサオにゆがむとき～</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/59141/S_ba40377e78c04d88aa0df9658559f8ab_20260226112744099.jpg" />
-    <desc lang="ja">とんでもない過ちへと向かっていく美人妻◆出演：飯山香織
-【番組説明】大失態を起こし上司に嫌われてしまった夫。妻は夫の為に単身で上司と会うのだが、それを機に過ちへと堕ちていく…。大切なマイホームで上司と妻がフ●ックし、職場の夫とスピーカーフォンを使って仕事の指示までするなんて…。
-【番組名】上司と部下の妻12～その可愛らしい童顔が他人のサオにゆがむとき～</desc>
   </programme>
   <programme channel="CH.944" start="20260403223000 +0900" stop="20260404010000 +0900">
     <title lang="ja">★天神羽衣 博多っ子、発情。チ●ポでイッでみたい福岡女子を1日かけてゲリラ性感…</title>
@@ -115392,12 +115167,6 @@ CH.947 チェリーボムHD   も楽しめちゃう！
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/59082/S_d4a88b8888864abba4d1303581ff9bfb_20260226100054308.jpg" />
     <desc lang="ja">【番組内容】未●年の素●女子たちにインタビューと称してMM便にご案内！人生初の「素股」を体験！恥じらうも…若くてプリップリな敏感生オマ○コを擦って本気イキする未成年娘続出！</desc>
   </programme>
-  <programme channel="CH.959" start="20260403183000 +0900" stop="20260403223000 +0900">
-    <title lang="ja">★出張マッサージの美熟女さんに勃起した肉棒を見せびらかして発情したら即座に中●し</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/65157/S_63056d57342f4d3f96b5ac76157b7a1d_20260330160107502.jpg" />
-    <desc lang="ja">自宅にマッサージを呼んだらやって来たのはイイ感じの美熟女さん。しかし下半身を揉まれるうちにフル勃起状態、熟女の視線はオレの肉棒に釘付け。「これはヤレる…？」
-【番組内容】自宅にマッサージを呼んだらやって来たのはイイ感じの美熟女さん。しかし下半身を揉まれるうちにフル勃起状態、熟女の視線はオレの肉棒に釘付け。「これはヤレる…？」と生肉棒をムキ出しにしてみれば、最初こそ嫌がっていたものの手コキ・フェラと特別サービスはエスカレート。最後には生で中●しまでしてしまいました…！</desc>
-  </programme>
   <programme channel="CH.959" start="20260403223000 +0900" stop="20260404020000 +0900">
     <title lang="ja">★人妻ナンパ中●しイカセ 38 神楽坂編</title>
     <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/53765/S_44321155a13c4ce08f388db784512252_20260121175916883.jpg" />
@@ -115670,13 +115439,6 @@ MIRANO</desc>
 望月のあ
 広瀬みつは
 【出演者】広瀬みつは、望月のあ、舞奈みく</desc>
-  </programme>
-  <programme channel="CH.960" start="20260403203000 +0900" stop="20260403223000 +0900">
-    <title lang="ja">★3話収録・母さんの友人と忘れじの濃密性交スペシャル</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/22089/S_c01dc429dc8243058787d6f5f2835131_20250801133248798.jpg" />
-    <desc lang="ja">☆PPV 440円☆PPM 月額 2,530円番組ホームページも是非、ご覧下さい。※https://zaptv.jp/
-【放送タイトル】★3話収録・母さんの友人と忘れじの濃密性交スペシャル
-【番組内容】【熟女 ドラマ】トイレのドアを開けた瞬間、宏は固まった。目にしたのは母の友達のなつみがおしっこしている光景。なつみは両親が旅行に出ている間、宏の世話を頼まれて来ていた。二人の間に気まずい空気が流れる。だが宏にとってそれ以上に問題だったのはなつみの破廉恥な姿を見て勃起が抑えられなくなってしまったことだった、、、人気シリーズ3作収録！！</desc>
   </programme>
   <programme channel="CH.960" start="20260403223000 +0900" stop="20260404023000 +0900">
     <title lang="ja">★【4時間248円】熟女ファン感謝祭！熟女一筋！グローバルの人妻熟女厳選５０作品</title>
@@ -116919,14 +116681,6 @@ MIRANO</desc>
 【放送タイトル】★義父と嫁夏の秘め事４中条りの
 【番組内容】【巨乳ドラマ】父の会社を継いだ夫。義理の父は隠居生活。社長夫人として妻・りのは不自由ない生活をしていた。しかし夫は浮気をしていた。そして毎年、りのと行っている花火大会をすっぽかした。落ち込んでいるりのに義父は…。
 【～ダイナマイトTV】全品全作300円斬り！～ALL297円!!～</desc>
-  </programme>
-  <programme channel="CH.964" start="20260403203000 +0900" stop="20260403223000 +0900">
-    <title lang="ja">★【FAプロ】禁●相姦の家 お義父ちゃん 義兄貴 義弟 クソ義父</title>
-    <icon src="https://pm-img-ap.skyperfectv.co.jp/uploads/thumbnail_origin/image/65371/S_438dd17076b94b3d9bd95dba82c246f1_20260331195948531.jpg" />
-    <desc lang="ja">☆PPV 440円☆PPM 月額2,530円番組ホームページも是非、ご覧下さい。※http://avking.jp
-【放送タイトル】★【FAプロ】禁●相姦の家 お義父ちゃん 義兄貴 義弟 クソ義父
-【◆お得情報◆】★25日は【半額祭】今月はSODドラマ特集！極上の官能ドラマをたっぷりお届け！★
-【番組内容】【ドラマ 禁断関係】家に渦巻く若い娘の体臭に、頭の中まで勃起させられた、父、兄、弟！！生意気娘といやらしい義父、病んだ兄を甲斐甲斐しく支える妹、妻の目を盗んで娘と関係する義父、嫁いだ娘の元を訪れる父、弟を誘惑する姉など、全6話からなる淫猥なストーリーが満載！一見して平穏無事な家庭でも、一皮剥いたその姿は…、というのが世間の裏側。今宵は、そんな‘禁じられた秘め事’を是非とも味わって下さい。</desc>
   </programme>
   <programme channel="CH.964" start="20260403223000 +0900" stop="20260404000000 +0900">
     <title lang="ja">★【小沢菜穂】出張先で長年一緒に働く女子社員と相部屋。「お前だけとは無いわ…」と</title>
