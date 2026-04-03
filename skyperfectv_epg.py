@@ -214,39 +214,56 @@ class SkyPerfectUltimate:
             
         return progs
 
-    def sort_epg(self, file_path):
-        """专门负责对生成的 XML 进行清洗和排序"""
-        try:
-            tree = ET.parse(file_path)
-            root = tree.getroot()
+    def download_to_zip(self, all_progs):
+        import zipfile
+        poster_dir = "posters"
+        # 修正：确保目录存在，且干净
+        if not os.path.exists(poster_dir):
+            os.makedirs(poster_dir)
 
-            # 1. 提取标签
-            channels = root.findall('channel')
-            programmes = root.findall('programme')
+        print(f"📂 GitHub 云端开始并发下载海报...")
 
-            # 2. 核心排序：先按频道 ID 升序，同频道按时间升序
-            programmes.sort(key=lambda x: (x.get('channel', ''), x.get('start', '')))
+        def _down(p):
+            title, url = p.get('title'), p.get('icon')
+            if not title or not url: return
+            # 🎯 确保文件名不超过系统限制，并处理空格
+            clean_name = re.sub(r'[\\/:*?"<>|]', '_', title).strip()[:100]
+            path = os.path.join(poster_dir, f"{clean_name}.jpg")
+            
+            if os.path.exists(path): return
+            try:
+                # 推荐使用 self.session 保持长连接性能更好
+                r = self.session.get(url, timeout=10) 
+                if r.status_code == 200:
+                    with open(path, 'wb') as f: 
+                        f.write(r.content)
+            except: 
+                pass
 
-            # 3. 重组 XML 树
-            # 这种写法比循环 remove 更简洁高效
-            new_children = channels + programmes
-            root[:] = new_children 
+        with ThreadPoolExecutor(max_workers=50) as executor:
+            executor.map(_down, all_progs)
 
-            # 4. 写回文件
-            tree.write(file_path, encoding='utf-8', xml_declaration=True)
-            print(f"✅ EPG 排序完成：已按频道和时间重组 {len(programmes)} 条节目。")
-        except Exception as e:
-            print(f"❌ 排序失败: {e}")
-    
+        zip_name = 'posters.zip'
+        with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as z:
+            for file in os.listdir(poster_dir):
+                file_path = os.path.join(poster_dir, file)
+                if os.path.isfile(file_path):
+                    # 🎯 第二个参数 'file' 保证压缩包内没有文件夹层级
+                    z.write(file_path, file)
+        print(f"📦 海报打包完成: {zip_name} (含 {len(os.listdir(poster_dir))} 张图片)")
+
     def run(self):
         file_name = "epg_ultimate.xml" 
         start_time = time.time()
+        # 🎯 频道图标链接
         icon_base = "https://www.skyperfectv.co.jp/library/common/img/channel/icon/premium/m_{}.gif"
+        
+        # 修正：将 CHANNELS_MAP 的引用转换逻辑放到 run 内部
         ref_to_id = {v[0].rstrip(':').upper(): k for k, v in CHANNELS_MAP.items()}
         all_progs = []
         count = 0
         
-        # 1. 抓取任务
+        # 1. 并发抓取频道
         with ThreadPoolExecutor(max_workers=5) as executor:
             tasks = [executor.submit(self.fetch_channel, k, v[0], v[1]) for k, v in CHANNELS_MAP.items()]
             for f in as_completed(tasks):
@@ -258,59 +275,61 @@ class SkyPerfectUltimate:
                         count += 1
                         if count % 5 == 0:
                             self.save_cache()
-                            print(f"📡 已自动存档缓存，当前频道进度: {count}")
+                            print(f"📡 进度: {count}/{len(CHANNELS_MAP)} 频道已同步")
                 except Exception as e:
                     print(f"⚠️ 频道抓取异常: {e}")
 
-        # 2. 构建最终 XML
+        # 2. 构建 XML 结构
         root = ET.Element("tv", {"generator-info-name": "SkyPerfectUltimate"})
         
-        # 添加频道头
+        # 频道头（带图标）
         for ch_num, (ref, name) in CHANNELS_MAP.items():
             chan = ET.SubElement(root, "channel", id=f"CH.{ch_num}")
             ET.SubElement(chan, "display-name").text = name
-            
-            # 🎯 自动合成频道图标 URL
-            # 假设 ch_num 是 '528' 这种字符串或数字
-            channel_icon_url = icon_base.format(ch_num)
+            # 补零处理：假设频道号需要 3 位，如 528
+            channel_icon_url = icon_base.format(str(ch_num).zfill(3))
             ET.SubElement(chan, "icon", src=channel_icon_url)
         
-        # --- ✨ 简化后的 programme 节点生成 ---
+        # 节目节点
         for p in all_progs:
             clean_ref = p['ref'].rstrip(':').upper()
             short_id_num = ref_to_id.get(clean_ref, 'Unknown')
             short_id = f"CH.{short_id_num}"
             
             prog = ET.SubElement(root, "programme", channel=short_id, start=p['start'], stop=p['stop'])
-            ET.SubElement(prog, "title", lang="ja").text = p['title'].strip() if p['title'] else ""
+            ET.SubElement(prog, "title", lang="ja").text = p['title'].strip() if p['title'] else "无标题"
 
-            # 🎯 插入图标节点
             if p.get('icon'):
                 ET.SubElement(prog, "icon", src=p['icon'])
-            # 因为抓取时已经洗干净了，这里直接写入
+            
             desc_val = p.get('desc', '')
             if desc_val:
                 ET.SubElement(prog, "desc", lang="ja").text = desc_val
-            
 
-        # 3. 内存排序
-        channels = root.findall('channel')
-        programmes = root.findall('programme')
-        programmes.sort(key=lambda x: (x.get('channel', ''), x.get('start', '')))
-        root[:] = channels + programmes
-        print(f"✅ 内存排序完成：共计 {len(programmes)} 条节目")
+        # 3. 内存排序（确保 Aglare 渲染时时间轴不跳变）
+        channels_nodes = root.findall('channel')
+        programmes_nodes = root.findall('programme')
+        programmes_nodes.sort(key=lambda x: (x.get('channel', ''), x.get('start', '')))
+        root[:] = channels_nodes + programmes_nodes
 
-        # 4. 落地保存并压缩
-        self.save_cache()
+        # 4. 落地保存
         tree = ET.ElementTree(root)
         ET.indent(tree, space="  ")
         tree.write(file_name, encoding="utf-8", xml_declaration=True)
         
-        # 5. 生成压缩包
+        # 5. 压缩 XML (Enigma2 专用)
         with open(file_name, 'rb') as f_in, gzip.open(f"{file_name}.gz", 'wb') as f_out:
             f_out.writelines(f_in)
         
-        print(f"\n🚀 全部任务完成！耗时: {time.time()-start_time:.1f}s | 缓存库总量: {len(self.cache)}")
+        # 6. ✨ 核心增强：打包海报图片
+        self.download_to_zip(all_progs)
+        
+        # 7. 最后的缓存存档
+        self.save_cache()
+        
+        print(f"\n🚀 全部任务完成！")
+        print(f"⏱️ 耗时: {time.time()-start_time:.1f}s")
+        print(f"📁 文件: {file_name}.gz | posters.zip")
       
 if __name__ == "__main__":
     SkyPerfectUltimate().run()
