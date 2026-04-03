@@ -160,6 +160,7 @@ class SkyPerfectUltimate:
         except: return None
 
     def fetch_channel(self, ch_num, srv_ref, name):
+        # 基础 URL
         url = f"{self.base_url}/program/schedule/premium/channel:{ch_num}/"
         progs = []
         print(f"⏳ 正在同步: {name:<20} (ID: {ch_num})", flush=True)
@@ -168,15 +169,13 @@ class SkyPerfectUltimate:
             res = self.session.get(url, timeout=15)
             soup = BeautifulSoup(res.text, 'lxml')
             
-            # 1. 查找所有节目容器
+            # 1. 锁定所有的节目容器 li
             items = soup.find_all('li', class_='p-program__item')
-            total_items = len(items)
-            cached_count = 0
             
             with ThreadPoolExecutor(max_workers=10) as executor:
                 futures = []
-                # 记录已处理的 URL，防止同一页面有重复链接
-                seen_urls = set()
+                seen_urls = set()  # 用于在单频道内去重
+                cached_count = 0
                 
                 for item in items:
                     a_tag = item.find('a', class_='p-program__link')
@@ -185,29 +184,28 @@ class SkyPerfectUltimate:
                     href = a_tag.get('href')
                     full_url = self.base_url + href
                     
+                    # 避免同一个页面里重复抓取相同的 URL
                     if full_url in seen_urls: continue
                     seen_urls.add(full_url)
 
-                    # 🎯 提取图片链接
+                    # 🎯 提取图片链接 (data-lazysrc)
                     img_tag = item.find('img', class_='js-program_thumbnail')
                     icon_url = img_tag.get('data-lazysrc') if img_tag else None
 
-                    # 2. 检查缓存
+                    # 2. 预检缓存命中情况（仅用于输出统计）
                     if full_url in self.cache:
                         cached_count += 1
-                        # 如果缓存里没图片但现在有了，更新它（可选）
-                        if icon_url and 'icon' not in self.cache[full_url]:
-                            with self.lock:
-                                self.cache[full_url]['icon'] = icon_url
                     
-                    # 3. 提交任务（fetch_detail 内部会处理缓存命中逻辑）
+                    # 3. 提交任务给 fetch_detail (它会处理剩下的详情页抓取和清洗)
                     futures.append(executor.submit(self.fetch_detail, full_url, srv_ref, url, icon_url))
                 
+                # 收集结果
                 for f in as_completed(futures):
                     res_data = f.result()
                     if res_data:
                         progs.append(res_data)
             
+            # 实时总结
             new_fetched = len(seen_urls) - cached_count
             print(f"✅ {name:<20} | 总计: {len(progs):>2} | 缓存: {cached_count:>2} | 新抓: {new_fetched:>2}", flush=True)
             
