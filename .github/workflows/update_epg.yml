@@ -8,8 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions: # 赋予 Action 推送代码的权限
-      contents: write
+    permissions:
+      contents: write # 必须：允许推送代码和创建 Release
       
     steps:
       - name: Checkout code
@@ -25,7 +25,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4 lxml
 
-      # --- 关键：恢复缓存 ---
+      # --- 恢复缓存 ---
       - name: Restore EPG Cache
         uses: actions/cache/restore@v3
         with:
@@ -34,12 +34,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-epg-cache-
 
+      # --- 运行爬虫 ---
       - name: Run EPG Scraper
         env:
           CHANNELS_JSON: ${{ vars.CHANNELS_JSON }}
-        run: python skyperfectv_epg.py 
+        run: python skyperfectv_epg.py
 
-      # --- 关键：保存更新后的缓存 ---
+      # --- 保存缓存 (放在脚本运行后) ---
       - name: Save EPG Cache
         uses: actions/cache/save@v3
         if: always() 
@@ -47,7 +48,35 @@ jobs:
           path: epg_cache.json
           key: ${{ runner.os }}-epg-cache-${{ github.run_id }}
 
-      # --- 步骤 1：发布到 Artifacts (方便手动下载) ---
+      # --- 步骤 1：更新 Release (提供固定下载链接) ---
+      - name: Update Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: latest
+          files: |
+            epg_ultimate.xml.gz
+            posters.zip
+          body: "每日自动更新 SPTV 海报与 EPG"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # --- 步骤 2：提交 EPG 到仓库 (可选) ---
+      - name: Commit and Push
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          if [ -f "epg_ultimate.xml.gz" ]; then
+            git add epg_ultimate.xml epg_ultimate.xml.gz
+            if ! git diff --staged --quiet; then
+              git commit -m "Daily EPG Update (Incremental)"
+              for i in {1..3}; do
+                git pull --rebase origin main && git push origin main && break || sleep 5
+              done
+            fi
+          fi
+
+      # --- 步骤 3：发布 Artifacts (备份) ---
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -56,28 +85,3 @@ jobs:
             epg_ultimate.xml.gz
             posters.zip
           retention-days: 1
-
-      # --- 步骤 2：提交到仓库 (方便机顶盒直接 wget/git pull) ---
-      - name: Commit and Push
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
-          # 检查文件
-          if [ ! -f "epg_ultimate.xml.gz" ]; then
-            echo "Error: epg_ultimate.xml.gz not found!"
-            exit 1
-          fi
-
-          # 建议：不要把 posters.zip commit 进仓库（文件太大且变动频繁）
-          # 只 commit EPG 文件，海报通过上面的 Artifacts 下载或者放在 Release
-          git add epg_ultimate.xml epg_ultimate.xml.gz
-
-          if ! git diff --staged --quiet; then
-            git commit -m "Daily EPG Update (Incremental)"
-            for i in {1..3}; do
-              git pull --rebase origin main && git push origin main && break || sleep 5
-            done
-          else
-            echo "No changes to commit, skipping push."
-          fi
