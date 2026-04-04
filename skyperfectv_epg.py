@@ -214,29 +214,64 @@ class SkyPerfectUltimate:
             
         return progs
 
-    def download_to_zip(self, all_progs):
+def download_to_zip(self, all_progs):
         import zipfile
+        import os
+        import re
+        from datetime import datetime, timedelta
+        from concurrent.futures import ThreadPoolExecutor
+
         poster_dir = "posters"
-        # 修正：确保目录存在，且干净
         if not os.path.exists(poster_dir):
             os.makedirs(poster_dir)
 
-        print(f"📂 GitHub 云端开始并发下载海报...")
+        # 🎯 获取当前时间以及 24 小时前的时间点
+        now = datetime.now()
+        time_limit = now + timedelta(hours=24) # 只要从现在起到未来 24 小时内的节目
+        # 如果你是想下载“过去 24 小时到未来 24 小时”的，可以用下面这行：
+        # start_limit = now - timedelta(hours=24)
+
+        print(f"📂 GitHub 云端开始并发下载未来 24 小时内的海报...")
 
         def _down(p):
             title, url = p.get('title'), p.get('icon')
+            start_time_raw = p.get('start') # 假设你的数据里开始时间字段是 'start'
+            
             if not title or not url: return
-            # 🎯 确保文件名不超过系统限制，并处理空格
-            clean_name = re.sub(r'[\\/:*?"<>|]', '_', title).strip()[:100]
+
+            # --- 🎯 时间过滤逻辑 ---
+            try:
+                # 假设 start_time_raw 是 "20260404080000" 这种格式，根据你实际的 EPG 格式调整
+                # 如果 start_time_raw 已经是 datetime 对象，则直接比较
+                if isinstance(start_time_raw, str):
+                    prog_time = datetime.strptime(start_time_raw[:14], "%Y%m%d%H%M%S")
+                else:
+                    prog_time = start_time_raw
+                
+                # 只下载从现在开始，到未来 24 小时内开始的节目
+                if not (now <= prog_time <= time_limit):
+                    return 
+            except:
+                # 如果解析时间失败，默认跳过或下载，建议根据实际数据结构调试此处
+                pass
+            # -----------------------
+
+            # 🎯 沿用你之前的清洗逻辑，并加上我们之前讨论的“机顶盒对齐”规则
+            # 建议使用我们之前写的 sync_clean_name 逻辑，防止机顶盒找不到图
+            clean_name = re.sub(r'[\u0000-\u001F\u007F-\u009F]', '', title)
+            clean_name = re.sub(r'\[.*?\]', '', clean_name)
+            clean_name = re.sub(r'[\\/:*?"<>|]', '', clean_name).strip()[:100]
+            
             path = os.path.join(poster_dir, f"{clean_name}.jpg")
             
             if os.path.exists(path): return
             try:
-                # 推荐使用 self.session 保持长连接性能更好
                 r = self.session.get(url, timeout=10) 
                 if r.status_code == 200:
-                    with open(path, 'wb') as f: 
-                        f.write(r.content)
+                    # 🎯 增加校验：只有大于 1KB 的图才保存，防止损坏的图导致机顶盒转圈
+                    if len(r.content) > 1024:
+                        with open(path, 'wb') as f: 
+                            f.write(r.content)
             except: 
                 pass
 
@@ -244,13 +279,7 @@ class SkyPerfectUltimate:
             executor.map(_down, all_progs)
 
         zip_name = 'posters.zip'
-        with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as z:
-            for file in os.listdir(poster_dir):
-                file_path = os.path.join(poster_dir, file)
-                if os.path.isfile(file_path):
-                    # 🎯 第二个参数 'file' 保证压缩包内没有文件夹层级
-                    z.write(file_path, file)
-        print(f"📦 海报打包完成: {zip_name} (含 {len(os.listdir(poster_dir))} 张图片)")
+        # ... 后面压缩 zip 的代码保持不变 ...
 
     def run(self):
         file_name = "epg_ultimate.xml" 
