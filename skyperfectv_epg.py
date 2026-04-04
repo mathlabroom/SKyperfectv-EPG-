@@ -222,42 +222,40 @@ class SkyPerfectUltimate:
         from concurrent.futures import ThreadPoolExecutor
 
         poster_dir = "posters"
+        zip_name = 'posters.zip'  # 🎯 确保这是 GitHub Action 寻找的文件名
+        
         if not os.path.exists(poster_dir):
             os.makedirs(poster_dir)
 
-        # 🎯 获取当前时间以及 24 小时前的时间点
+        # 获取当前时间范围
         now = datetime.now()
-        time_limit = now + timedelta(hours=24) # 只要从现在起到未来 24 小时内的节目
-        # 如果你是想下载“过去 24 小时到未来 24 小时”的，可以用下面这行：
-        # start_limit = now - timedelta(hours=24)
+        time_limit = now + timedelta(hours=24)
 
-        print(f"📂 GitHub 云端开始并发下载未来 24 小时内的海报...")
+        print(f"📂 开始筛选并同步未来 24 小时内的海报...")
 
         def _down(p):
             title, url = p.get('title'), p.get('icon')
-            start_time_raw = p.get('start') # 假设你的数据里开始时间字段是 'start'
+            start_time_raw = p.get('start')
             
             if not title or not url: return
 
-            # --- 🎯 时间过滤逻辑 ---
+            # 时间过滤逻辑
             try:
-                # 假设 start_time_raw 是 "20260404080000" 这种格式，根据你实际的 EPG 格式调整
-                # 如果 start_time_raw 已经是 datetime 对象，则直接比较
-                if isinstance(start_time_raw, str):
-                    prog_time = datetime.strptime(start_time_raw[:14], "%Y%m%d%H%M%S")
-                else:
-                    prog_time = start_time_raw
+                # 统一处理 EPG 时间格式 (去除时区部分进行比较)
+                # 示例: "20260404080000 +0900" -> "20260404080000"
+                clean_start = start_time_raw.split(' ')[0] if isinstance(start_time_raw, str) else start_time_raw
                 
-                # 只下载从现在开始，到未来 24 小时内开始的节目
+                if isinstance(clean_start, str):
+                    prog_time = datetime.strptime(clean_start[:14], "%Y%m%d%H%M%S")
+                else:
+                    prog_time = clean_start
+                
                 if not (now <= prog_time <= time_limit):
                     return 
             except:
-                # 如果解析时间失败，默认跳过或下载，建议根据实际数据结构调试此处
-                pass
-            # -----------------------
+                return 
 
-            # 🎯 沿用你之前的清洗逻辑，并加上我们之前讨论的“机顶盒对齐”规则
-            # 建议使用我们之前写的 sync_clean_name 逻辑，防止机顶盒找不到图
+            # 文件名清洗 (机顶盒兼容模式)
             clean_name = re.sub(r'[\u0000-\u001F\u007F-\u009F]', '', title)
             clean_name = re.sub(r'\[.*?\]', '', clean_name)
             clean_name = re.sub(r'[\\/:*?"<>|]', '', clean_name).strip()[:100]
@@ -267,20 +265,33 @@ class SkyPerfectUltimate:
             if os.path.exists(path): return
             try:
                 r = self.session.get(url, timeout=10) 
-                if r.status_code == 200:
-                    # 🎯 增加校验：只有大于 1KB 的图才保存，防止损坏的图导致机顶盒转圈
-                    if len(r.content) > 1024:
-                        with open(path, 'wb') as f: 
-                            f.write(r.content)
+                if r.status_code == 200 and len(r.content) > 1024:
+                    with open(path, 'wb') as f: 
+                        f.write(r.content)
             except: 
                 pass
 
+        # 1. 并发执行下载任务
         with ThreadPoolExecutor(max_workers=50) as executor:
             executor.map(_down, all_progs)
 
-        zip_name = 'posters.zip'
-        # ... 后面压缩 zip 的代码保持不变 ...
-
+        # 🎯 2. ✨ 关键：执行打包逻辑 (你之前漏掉的部分)
+        print(f"📦 正在打包 {zip_name}...")
+        with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as z:
+            success_count = 0
+            if os.path.exists(poster_dir):
+                for file in os.listdir(poster_dir):
+                    file_path = os.path.join(poster_dir, file)
+                    if os.path.isfile(file_path):
+                        z.write(file_path, file)
+                        success_count += 1
+            
+            # 兜底：如果没图也创建一个 readme 防止 Action 报错
+            if success_count == 0:
+                z.writestr("readme.txt", "No posters found for the current window.")
+        
+        print(f"✅ 海报包已生成: {zip_name} (包含 {success_count} 张海报)")
+        
     def run(self):
         file_name = "epg_ultimate.xml" 
         start_time = time.time()
