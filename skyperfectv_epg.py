@@ -214,7 +214,7 @@ class SkyPerfectUltimate:
             
         return progs
 
-def download_to_zip(self, all_progs):
+    def download_to_zip(self, all_progs):
         import zipfile
         import os
         import re
