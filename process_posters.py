@@ -14,8 +14,10 @@ def fury_standard_clean(raw_title):
     # 3. 强制全小写
     text = text.lower()
     
-    # 4. 删除年份 (空格+4位数字，如 2024)
-    text = re.sub(r'\s\d{4}', '', text)
+    # 4. 删除年份 (兼容：有空格+4位数字，或结尾的纯4位数字)
+    # \b 确保是独立的数字块，防止把 9-1-1 这种连字符数字切碎
+    # 匹配模式：(可选空格) + (19xx 或 20xx 年份)
+    text = re.sub(r'\s?(19|20)\d{2}', '', text)
     
     # 5. 删除末尾的日文右引号 」
     if text.endswith('」'):
