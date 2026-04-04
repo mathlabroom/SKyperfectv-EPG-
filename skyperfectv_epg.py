@@ -9,20 +9,18 @@ import re
 import gzip
 import os
 import json
-import threading  # 引入锁机制
+import threading
+import zipfile
+
 # 动态获取频道映射
 def load_channels():
-    # 从 GitHub Actions 注入的环境变量中读取
     raw_data = os.environ.get("CHANNELS_JSON")
     if raw_data:
         try:
-            # JSON 只能存列表 []，读取后转回元组 () 以保持原有逻辑兼容
             data = json.loads(raw_data)
             return {k: tuple(v) for k, v in data.items()}
         except Exception as e:
             print(f"❌ 环境变量 CHANNELS_JSON 解析出错: {e}")
-    
-    # 如果变量不存在或解析失败，返回一个空字典或报错提示
     print("⚠️ 未发现有效的频道环境变量，请检查 GitHub Settings。")
     return {}
 
@@ -39,37 +37,49 @@ class SkyPerfectUltimate:
         self.session.cookies.update({'isAdult': '1', 'age_check': '1', 'adult_auth': 'true'})
         
         self.cache_file = "epg_cache.json"
-        self.lock = threading.Lock() # 线程锁，解决缓存写入丢失问题
+        self.lock = threading.Lock()
         self.cache = self.load_cache()
+
+    # --- 🎯 核心增强：统一清洗逻辑 ---
+    def ultimate_clean(self, text):
+        if not text: return ""
+        # 1. 全角转半角 (解决 １２３ vs 123)
+        text = "".join([chr(ord(c) - 0xfee0) if 0xff01 <= ord(c) <= 0xff5e else c for c in text])
+        text = text.replace('　', ' ') 
+        
+        # 2. 强力移除所有类型的括号及其内容 (解决 【無料】、(1)、[字]、(再) 等)
+        text = re.sub(r'\[.*?\]|【.*?】|\(.*?\)|（.*?）', '', text)
+        
+        # 3. 移除开头和结尾的危险符号 (解决文件名以 ) 或 # 开头的问题)
+        text = text.lstrip(')#★* ') 
+        
+        # 4. 彻底干掉中间的特殊符号、空格、点号和波浪号
+        text = re.sub(r'[\s#★\*\.~～．,，]', '', text)
+        
+        # 5. 系统级非法字符清理 + 截断
+        clean = re.sub(r'[\\/:*?"<>|]', '', text).strip()[:80]
+        return clean if clean else "NoTitle"
 
     def load_cache(self):
         if os.path.exists(self.cache_file):
             try:
                 with open(self.cache_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    print(f"📂 已载入历史缓存: {len(data)} 条记录")
                     return data
             except: return {}
         return {}
 
     def save_cache(self):
-        """线程安全的保存逻辑"""
         with self.lock:
-            # 清理过期缓存（超过 10 天的删除，防止文件无限增大）
-            today = datetime.datetime.now()
-            # 这里的简单清理仅作为示例，如果需要更复杂的清理可以根据时间戳判断
             if len(self.cache) > 20000:
-                print("🧹 缓存过大，触发自动清理...")
                 self.cache = {k: v for i, (k, v) in enumerate(self.cache.items()) if i > 2000}
-
             try:
                 with open(self.cache_file, 'w', encoding='utf-8') as f:
                     json.dump(self.cache, f, ensure_ascii=False, indent=2)
             except Exception as e:
-                print(f"❌ 写入缓存文件失败: {e}")
+                print(f"❌ 写入缓存失败: {e}")
 
     def parse_japanese_time(self, date_raw, time_range_str):
-        # ... [解析逻辑保持不变] ...
         try:
             date_match = re.search(r'(\d{1,2})/(\d{1,2})', date_raw)
             if not date_match: return None, None
@@ -91,7 +101,6 @@ class SkyPerfectUltimate:
     def fetch_detail(self, url, srv_ref, referer, icon_url=None):
         if url in self.cache:
             data = self.cache[url].copy()
-            # 如果旧缓存没图片，这次顺便补上
             if icon_url and 'icon' not in data:
                 data['icon'] = icon_url
                 with self.lock: self.cache[url]['icon'] = icon_url
@@ -109,224 +118,128 @@ class SkyPerfectUltimate:
 
             time_el = soup.find('p', class_='p-info__time') or soup.find(string=re.compile(r'\d{1,2}/\d{1,2}.*?\d{2}:\d{2}'))
             if not time_el: return None
-            dt_m = re.search(r'(\d{1,2}/\d{1,2}).*?(\d{2}:\d{2}).*?(\d{2}:\d{2})', time_el.get_text(strip=True))
-            if not dt_m: return None
-            start_xml, stop_xml = self.parse_japanese_time(dt_m.group(1), f"{dt_m.group(2)}～{dt_m.group(3)}")
+            dt_m = re.search(r'(\d{1,2}/\d{1,2}).*?(\d{2}:\d{2}).*?(\d{2}:\d{3})', time_el.get_text(strip=True))
+            if not dt_m: 
+                # 兼容不同格式的正则
+                dt_m = re.search(r'(\d{1,2}/\d{1,2}).*?(\d{2}:\d{2})', time_el.get_text(strip=True))
+                if not dt_m: return None
+                start_xml, stop_xml = self.parse_japanese_time(dt_m.group(1), f"{dt_m.group(2)}～{dt_m.group(2)}")
+            else:
+                start_xml, stop_xml = self.parse_japanese_time(dt_m.group(1), f"{dt_m.group(2)}～{dt_m.group(3)}")
 
             parts = []
             main_d = soup.find('div', class_='p-info__detail')
             if main_d and main_d.p: parts.append(main_d.p.get_text(strip=True).replace('もっと見る', ''))
-            ov_d = soup.find('div', class_='p-info__detail__overflow')
-            if ov_d:
-                specs = [f"【{it.h3.text}】{it.p.text}" for it in ov_d.find_all('div', class_='p-info__cast') if it.h3 and it.p]
-                parts.append("\n".join(specs))
-            perf_d = soup.find('div', class_='p-info__performer')
-            if perf_d:
-                names = [li.get_text(strip=True) for li in perf_d.find_all('li') if li.get_text(strip=True)]
-                if names: parts.append("【出演者】" + "、".join(names))
-
-            # --- ✨ 核心修改：抓取时即刻清洗 ---
-            desc = "\n\n".join(parts) if parts else title
             
-            # 1. 关键词截断逻辑
-            STOP_WORDS = ("【お知らせ","お知らせ",  "【料金案内", "料金案内", "【■セットご案内", "【■セット案内", "詳細は", "◆視聴料金◆", "◆オススメ◆", "公式HP", "0120-")
+            desc = "\n\n".join(parts) if parts else title
+            STOP_WORDS = ("【お知らせ","【料金案内", "詳細は", "◆視聴料金◆", "0120-")
             cutoff = len(desc)
             for word in STOP_WORDS:
                 pos = desc.find(word)
-                if pos != -1 and pos < cutoff:
-                    cutoff = pos
+                if pos != -1 and pos < cutoff: cutoff = pos
             desc = desc[:cutoff]
 
-            # 2. 删除空行 + 删除不可见字符（针对 Enigma2 优化）
             lines = [l.strip() for l in desc.splitlines() if l.strip()]
             clean_desc = "\n".join(lines)
-            # 仅保留可打印字符，彻底防止 Enigma2 报错
             clean_desc = "".join(c for c in clean_desc if c.isprintable() or c in "\n\r\t")
             
-            result = {
-            'title': title, 
-            'desc': clean_desc, 
-            'start': start_xml, 
-            'stop': stop_xml,
-            'icon': icon_url  # 🎯 存入图片
-        }
-            
-            # --- 线程安全地写入缓存 ---
-            with self.lock:
-                self.cache[url] = result.copy()
-            
+            result = {'title': title, 'desc': clean_desc, 'start': start_xml, 'stop': stop_xml, 'icon': icon_url}
+            with self.lock: self.cache[url] = result.copy()
             result['ref'] = srv_ref
             return result
         except: return None
 
     def fetch_channel(self, ch_num, srv_ref, name):
-        # 基础 URL
         url = f"{self.base_url}/program/schedule/premium/channel:{ch_num}/"
         progs = []
-        print(f"⏳ 正在同步: {name:<20} (ID: {ch_num})", flush=True)
-        
         try:
             res = self.session.get(url, timeout=15)
             soup = BeautifulSoup(res.text, 'lxml')
-            
-            # 1. 锁定所有的节目容器 li
             items = soup.find_all('li', class_='p-program__item')
-            
             with ThreadPoolExecutor(max_workers=10) as executor:
                 futures = []
-                seen_urls = set()  # 用于在单频道内去重
-                cached_count = 0
-                
+                seen_urls = set()
                 for item in items:
                     a_tag = item.find('a', class_='p-program__link')
                     if not a_tag: continue
-                    
-                    href = a_tag.get('href')
-                    full_url = self.base_url + href
-                    
-                    # 避免同一个页面里重复抓取相同的 URL
+                    full_url = self.base_url + a_tag.get('href')
                     if full_url in seen_urls: continue
                     seen_urls.add(full_url)
-
-                    # 🎯 提取图片链接 (data-lazysrc)
                     img_tag = item.find('img', class_='js-program_thumbnail')
                     icon_url = img_tag.get('data-lazysrc') if img_tag else None
-
-                    # 2. 预检缓存命中情况（仅用于输出统计）
-                    if full_url in self.cache:
-                        cached_count += 1
-                    
-                    # 3. 提交任务给 fetch_detail (它会处理剩下的详情页抓取和清洗)
                     futures.append(executor.submit(self.fetch_detail, full_url, srv_ref, url, icon_url))
-                
-                # 收集结果
                 for f in as_completed(futures):
                     res_data = f.result()
-                    if res_data:
-                        progs.append(res_data)
-            
-            # 实时总结
-            new_fetched = len(seen_urls) - cached_count
-            print(f"✅ {name:<20} | 总计: {len(progs):>2} | 缓存: {cached_count:>2} | 新抓: {new_fetched:>2}", flush=True)
-            
+                    if res_data: progs.append(res_data)
+            print(f"✅ {name:<20} | 抓取完成: {len(progs)} 条")
         except Exception as e:
-            print(f"❌ {name:<20} 发生错误: {e}", flush=True)
-            
+            print(f"❌ {name} 错误: {e}")
         return progs
 
     def download_to_zip(self, all_progs):
-        import zipfile
-        import os
-        import re
-        from datetime import datetime, timedelta
-        from concurrent.futures import ThreadPoolExecutor
-
         poster_dir = "posters"
-        zip_name = 'posters.zip'  # 🎯 确保这是 GitHub Action 寻找的文件名
+        zip_name = 'posters.zip'
+        if not os.path.exists(poster_dir): os.makedirs(poster_dir)
         
-        if not os.path.exists(poster_dir):
-            os.makedirs(poster_dir)
-
-        # 获取当前时间范围
-        now = datetime.now()
+        now = datetime.datetime.now()
         time_limit = now + timedelta(hours=24)
-
-        print(f"📂 开始筛选并同步未来 24 小时内的海报...")
 
         def _down(p):
             title, url = p.get('title'), p.get('icon')
             start_time_raw = p.get('start')
-            
             if not title or not url: return
 
-            # 时间过滤逻辑
             try:
-                # 统一处理 EPG 时间格式 (去除时区部分进行比较)
-                # 示例: "20260404080000 +0900" -> "20260404080000"
-                clean_start = start_time_raw.split(' ')[0] if isinstance(start_time_raw, str) else start_time_raw
-                
-                if isinstance(clean_start, str):
-                    prog_time = datetime.strptime(clean_start[:14], "%Y%m%d%H%M%S")
-                else:
-                    prog_time = clean_start
-                
-                if not (now <= prog_time <= time_limit):
-                    return 
-            except:
-                return 
+                clean_start = start_time_raw.split(' ')[0]
+                prog_time = datetime.datetime.strptime(clean_start[:14], "%Y%m%d%H%M%S")
+                if not (now <= prog_time <= time_limit): return 
+            except: return 
 
-            # 文件名清洗 (机顶盒兼容模式)
-            clean_name = re.sub(r'[\u0000-\u001F\u007F-\u009F]', '', title)
-            clean_name = re.sub(r'\[.*?\]', '', clean_name)
-            clean_name = re.sub(r'[\\/:*?"<>|]', '', clean_name).strip()[:100]
-            
-            path = os.path.join(poster_dir, f"{clean_name}.jpg")
+            # 🎯 使用统一清洗逻辑生成图片名
+            clean_filename = self.ultimate_clean(title)
+            path = os.path.join(poster_dir, f"{clean_filename}.jpg")
             
             if os.path.exists(path): return
             try:
                 r = self.session.get(url, timeout=10) 
                 if r.status_code == 200 and len(r.content) > 1024:
-                    with open(path, 'wb') as f: 
-                        f.write(r.content)
-            except: 
-                pass
+                    with open(path, 'wb') as f: f.write(r.content)
+            except: pass
 
-        # 1. 并发执行下载任务
+        print(f"📂 同步海报中...")
         with ThreadPoolExecutor(max_workers=50) as executor:
             executor.map(_down, all_progs)
 
-        # 🎯 2. ✨ 关键：执行打包逻辑 (你之前漏掉的部分)
-        print(f"📦 正在打包 {zip_name}...")
+        print(f"📦 打包 {zip_name}...")
         with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as z:
             success_count = 0
             if os.path.exists(poster_dir):
                 for file in os.listdir(poster_dir):
                     file_path = os.path.join(poster_dir, file)
-                    if os.path.isfile(file_path):
-                        z.write(file_path, file)
-                        success_count += 1
-            
-            # 兜底：如果没图也创建一个 readme 防止 Action 报错
-            if success_count == 0:
-                z.writestr("readme.txt", "No posters found for the current window.")
-        
-        print(f"✅ 海报包已生成: {zip_name} (包含 {success_count} 张海报)")
-        
+                    z.write(file_path, file)
+                    success_count += 1
+            if success_count == 0: z.writestr("readme.txt", "No posters.")
+        print(f"✅ 海报包完成，共 {success_count} 张")
+
     def run(self):
-        file_name = "epg_ultimate.xml" 
+        file_name = "epg_ultimate.xml"
         start_time = time.time()
-        # 🎯 频道图标链接
         icon_base = "https://www.skyperfectv.co.jp/library/common/img/channel/icon/premium/m_{}.gif"
-        
-        # 修正：将 CHANNELS_MAP 的引用转换逻辑放到 run 内部
         ref_to_id = {v[0].rstrip(':').upper(): k for k, v in CHANNELS_MAP.items()}
         all_progs = []
-        count = 0
         
-        # 1. 并发抓取频道
         with ThreadPoolExecutor(max_workers=5) as executor:
             tasks = [executor.submit(self.fetch_channel, k, v[0], v[1]) for k, v in CHANNELS_MAP.items()]
             for f in as_completed(tasks):
-                try:
-                    result = f.result()
-                    if result:
-                        with self.lock:
-                            all_progs.extend(result)
-                        count += 1
-                        if count % 5 == 0:
-                            self.save_cache()
-                            print(f"📡 进度: {count}/{len(CHANNELS_MAP)} 频道已同步")
-                except Exception as e:
-                    print(f"⚠️ 频道抓取异常: {e}")
+                res = f.result()
+                if res: all_progs.extend(res)
 
-        # 2. 构建 XML 结构
         root = ET.Element("tv", {"generator-info-name": "SkyPerfectUltimate"})
         
-        # 频道头（带图标）
+        # 频道头
         for ch_num, (ref, name) in CHANNELS_MAP.items():
             chan = ET.SubElement(root, "channel", id=f"CH.{ch_num}")
             ET.SubElement(chan, "display-name").text = name
-            # 补零处理：假设频道号需要 3 位，如 528
             channel_icon_url = icon_base.format(str(ch_num).zfill(3))
             ET.SubElement(chan, "icon", src=channel_icon_url)
         
@@ -334,42 +247,34 @@ class SkyPerfectUltimate:
         for p in all_progs:
             clean_ref = p['ref'].rstrip(':').upper()
             short_id_num = ref_to_id.get(clean_ref, 'Unknown')
-            short_id = f"CH.{short_id_num}"
             
-            prog = ET.SubElement(root, "programme", channel=short_id, start=p['start'], stop=p['stop'])
-            ET.SubElement(prog, "title", lang="ja").text = p['title'].strip() if p['title'] else "无标题"
+            # 🎯 关键修改：XML 标题必须和图片名完全一致
+            clean_display_title = self.ultimate_clean(p['title'])
+            
+            prog = ET.SubElement(root, "programme", channel=f"CH.{short_id_num}", start=p['start'], stop=p['stop'])
+            ET.SubElement(prog, "title", lang="ja").text = clean_display_title
 
             if p.get('icon'):
                 ET.SubElement(prog, "icon", src=p['icon'])
             
-            desc_val = p.get('desc', '')
-            if desc_val:
-                ET.SubElement(prog, "desc", lang="ja").text = desc_val
+            if p.get('desc'):
+                ET.SubElement(prog, "desc", lang="ja").text = p['desc']
 
-        # 3. 内存排序（确保 Aglare 渲染时时间轴不跳变）
-        channels_nodes = root.findall('channel')
+        # 排序与保存
         programmes_nodes = root.findall('programme')
         programmes_nodes.sort(key=lambda x: (x.get('channel', ''), x.get('start', '')))
-        root[:] = channels_nodes + programmes_nodes
+        root[:] = root.findall('channel') + programmes_nodes
 
-        # 4. 落地保存
         tree = ET.ElementTree(root)
         ET.indent(tree, space="  ")
         tree.write(file_name, encoding="utf-8", xml_declaration=True)
         
-        # 5. 压缩 XML (Enigma2 专用)
         with open(file_name, 'rb') as f_in, gzip.open(f"{file_name}.gz", 'wb') as f_out:
             f_out.writelines(f_in)
         
-        # 6. ✨ 核心增强：打包海报图片
         self.download_to_zip(all_progs)
-        
-        # 7. 最后的缓存存档
         self.save_cache()
-        
-        print(f"\n🚀 全部任务完成！")
-        print(f"⏱️ 耗时: {time.time()-start_time:.1f}s")
-        print(f"📁 文件: {file_name}.gz | posters.zip")
-      
+        print(f"⏱️ 总耗时: {time.time()-start_time:.1f}s")
+
 if __name__ == "__main__":
     SkyPerfectUltimate().run()
