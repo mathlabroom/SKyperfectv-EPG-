@@ -4,32 +4,38 @@ import unicodedata
 from PIL import Image, ImageFilter  # 引入模糊滤镜
 
 def fury_standard_clean(raw_title):
-    # 1. Unicode 归一化 (核心：防止日文编码导致机顶盒蓝屏)
+    # 1. Unicode 归一化
     text = unicodedata.normalize('NFC', raw_title)
     
     # 2. 转小写并删除开头的 ★ 和空格
-    text = text.lower().lstrip('★ ')
+    # 优化：使用正则删除开头所有非字母数字的特殊符号
+    text = re.sub(r'^[★☆◆◇\s]+', '', text.lower())
     
     # 3. 频道/特定词汇修正
     if 'news24' in text:
         text = re.sub(r'news24', 'ne24', text, flags=re.IGNORECASE)
     
-    # 4. 删除年份 (精准匹配数字，不伤及空格)
+    # 4. 删除年份
     text = re.sub(r'\s?(19|20)\d{2}', '', text)
 
-    # 5. 删除括号备注 (【】 [] 等)
+    # 5. 删除括号备注
     text = re.sub(r'[\(\[].*?[\)\]]|【.*?】|（.*?）', '', text)
     
+    # --- 新增：查漏补缺 (处理末尾残留标点) ---
+    # 这一步会删除掉末尾所有的感叹号、问号、空格或特殊符号
+    text = text.rstrip('!！?？. 。★ \t\n')
+
     # 6. 横杠截断
     text = text.partition(" -")[0]
 
-    # 7. 删除文件系统禁忌符号：冒号
+    # 7. 删除文件系统禁忌符号
     text = text.replace(':', '')
 
-    # 8. 格式化：只处理第一个字符大写，保留中间所有空格和符号 (∞, ●, !!)
+    # 8. 格式化
     text = text.strip()
     if text:
-        text = text[0].upper() + text[1:]
+        # 兼容只有一个字符的情况
+        text = text[0].upper() + text[1:] if len(text) > 1 else text.upper()
         
     return text
 
