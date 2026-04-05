@@ -73,7 +73,7 @@ def main():
             try:
                 # 转换时间戳
                 dt = datetime.strptime(time_str, "%Y%m%d%H%M")
-                ts = int(time.mktime(dt.timetuple()))
+                ts = int(time.mktime(dt.timetuple())) - 32400
                 
                 new_name = f"{f_hash}_{ts}.jpg"
                 src_path = os.path.join(raw_dir, filename)
