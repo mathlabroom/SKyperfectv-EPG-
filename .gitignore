@@ -1,0 +1,6 @@
+posters/
+posters_raw/
+posters_final/
+epg_cache.json
+__pycache__/
+*.log
