@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: '3.10'
 
-      # --- 1. 安装所有依赖 (在这里加入 Pillow) ---
+      # --- 1. 安装所有依赖 ---
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -41,10 +41,12 @@ jobs:
           CHANNELS_JSON: ${{ vars.CHANNELS_JSON }}
         run: python skyperfectv_epg.py
 
-      # --- 3. 处理海报 (利用已安装的 Pillow) ---
+      # --- 3. 处理海报 (关键修改：引入 FURY_ID 变量) ---
       - name: Download & Process Posters
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 注入你在 GitHub Actions Variables 里的 FURY_ID
+          FURY_ID: ${{ vars.FURY_ID }} 
         run: |
           # A. 从最新 Release 下载原始 posters.zip
           gh release download latest -p "posters.zip" --clobber || echo "No posters.zip found in release"
@@ -56,13 +58,16 @@ jobs:
             unzip -o posters.zip -d posters_raw/
             
             # C. 运行清洗与图片处理脚本
+            # 脚本内部通过 os.getenv('FURY_ID') 就能拿到映射表了
             python process_posters.py
             
             # D. 打包 (增加检查防止空包)
-            if [ -d "posters_final" ]; then
+            if [ "$(ls -A posters_final)" ]; then
               cd posters_final
               zip -r ../fury_posters.zip ./*
               cd ..
+            else
+              echo "posters_final is empty, skipping zip."
             fi
           else
             echo "Skipping poster processing as posters.zip is missing."
@@ -76,7 +81,7 @@ jobs:
           path: epg_cache.json
           key: ${{ runner.os }}-epg-cache-${{ github.run_id }}
 
-      # --- 4. 更新 Release (分发 epg_ultimate.xml.gz, posters.zip, fury_posters.zip) ---
+      # --- 4. 更新 Release ---
       - name: Update Release
         uses: softprops/action-gh-release@v1
         with:
@@ -89,7 +94,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # --- 5. 提交 EPG 到仓库 (可选) ---
+      # --- 5. 提交 EPG 到仓库 ---
       - name: Commit and Push
         run: |
           git config --local user.email "action@github.com"
@@ -105,7 +110,7 @@ jobs:
             fi
           fi
 
-      # --- 6. 发布 Artifacts (备份) ---
+      # --- 6. 发布 Artifacts ---
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
