@@ -127,58 +127,58 @@ class SkyPerfectUltimate:
 
         poster_dir = "posters"
         zip_name = "posters.zip"
+        if not os.path.exists(poster_dir): os.makedirs(poster_dir)
         
-        # 确保目录存在且为空
-        if not os.path.exists(poster_dir): 
-            os.makedirs(poster_dir)
-        
+        # 1. 获取当前时间（注意：GitHub Actions 是 UTC 时间，日本 EPG 是 +0900）
+        # 为了保险，我们统一转为 UTC 比较，或者简单地对比前 12 位数字
+        now = datetime.datetime.now()
+        time_limit = datetime.timedelta(hours=48)
+
         def _down(p):
             url = p.get('icon')
-            start_raw = p.get('start')
+            start_raw = p.get('start') # 格式: "20260405180000 +0900"
             ch_num = p.get('ch_num')
             
-            if not url or not start_raw: 
-                return
+            if not url or not start_raw: return
             
             try:
-                # 格式化文件名：频道_时间.jpg
-                time_tag = start_raw.split(' ')[0][:12] 
-                filename = f"CH.{ch_num}_{time_tag}.jpg"
+                # 2. 解析时间：取前 12 位数字 (YYYYMMDDHHMM)
+                time_digits = "".join(filter(str.isdigit, start_raw))[:12]
+                prog_time = datetime.datetime.strptime(time_digits, "%Y%m%d%H%M")
+
+                # 3. 时间过滤：只下载最近 48 小时的
+                # 这里加了 8 小时偏移以适配 GitHub(UTC) 与 日本(+0900) 的时差
+                if abs((now - prog_time).total_seconds()) > (time_limit.total_seconds() + 28800):
+                    return 
+
+                # 4. 构造文件名
+                filename = f"CH.{ch_num}_{time_digits}.jpg"
                 path = os.path.join(poster_dir, filename)
                 
-                # 如果文件已存在则跳过
-                if os.path.exists(path): 
-                    return
+                if os.path.exists(path): return
                 
+                # 使用 session 下载以保持连接池性能
                 r = self.session.get(url, timeout=10)
                 if r.status_code == 200:
                     with open(path, 'wb') as f: 
                         f.write(r.content)
             except Exception as e:
-                print(f"下载失败 {url}: {e}")
+                pass 
 
-        # 使用线程池并发下载
-        print(f"开始下载图片，共 {len(all_progs)} 个条目...")
+        print(f"🚀 正在筛选 48h 内的图片并下载...")
+        # 你的 all_progs 可能包含重复条目，先去重可以提速
+        unique_progs = { (p['ch_num'], p['start']): p for p in all_progs if p.get('icon') }.values()
+
         with ThreadPoolExecutor(max_workers=15) as executor:
-            executor.map(_down, all_progs)
+            executor.map(_down, unique_progs)
         
-        # 打包成 ZIP
-        if os.listdir(poster_dir):
+        # 5. 打包逻辑
+        if os.path.exists(poster_dir) and os.listdir(poster_dir):
             with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as z:
                 for file in os.listdir(poster_dir):
                     z.write(os.path.join(poster_dir, file), file)
-            print(f"打包完成: {zip_name}")
-        else:
-            print("没有下载到任何新图片。")
-
-        # --- 关键：输出 Tag 给 GitHub Actions ---
-        tag_name = datetime.datetime.now().strftime("%Y%m%d_%H%M")
-        if 'GITHUB_OUTPUT' in os.environ:
-            with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
-                # 这里定义了两个输出变量，供 Actions 使用
-                print(f"RELEASE_TAG=EPG_{tag_name}", file=fh)
-                print(f"HAS_POSTERS={'true' if os.path.exists(zip_name) else 'false'}", file=fh)
-
+            print(f"📦 打包完成: {zip_name} (含 {len(os.listdir(poster_dir))} 张图片)")
+            
     def run(self):
         all_progs = []
         with ThreadPoolExecutor(max_workers=5) as executor:
