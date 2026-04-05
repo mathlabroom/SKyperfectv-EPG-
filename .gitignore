@@ -1,6 +1,14 @@
+# 忽略图片相关目录
 posters/
 posters_raw/
 posters_final/
+posters.zip
+fury_posters.zip
+
+# 忽略缓存和日志
 epg_cache.json
-__pycache__/
 *.log
+__pycache__/
+
+# 忽略解压出来的原始 XML
+epg_ultimate.xml
