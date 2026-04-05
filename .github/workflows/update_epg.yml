@@ -1,51 +1,132 @@
-- name: Run EPG Scraper
-        id: run_epg  # 添加 ID 方便后续判断
+name: Auto Update EPG & Standardize Posters
+
+on:
+  schedule:
+    - cron: '0 19 * * *' # 北京时间凌晨 3:00
+  workflow_dispatch:      # 允许手动触发测试
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write 
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4 lxml Pillow
+
+      - name: Restore EPG Cache
+        uses: actions/cache/restore@v3
+        with:
+          path: epg_cache.json
+          key: ${{ runner.os }}-epg-cache-
+          restore-keys: |
+            ${{ runner.os }}-epg-cache-
+
+      - name: Run EPG Scraper & Download Original Posters
+        id: scraper
         env:
           CHANNELS_JSON: ${{ vars.CHANNELS_JSON }}
         run: |
+          # 运行你的主脚本，该脚本应在根目录生成 posters.zip 和 epg_ultimate.xml.gz
           python skyperfectv_epg.py
-          # 确保脚本运行后，本地已经存在 posters.zip
-
-      - name: Process Posters (Standardize)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FURY_ID: ${{ vars.FURY_ID }} 
-        run: |
-          # 优先使用本次脚本新生成的 zip，如果没有才尝试下载旧的（保底策略）
-          if [ ! -f "posters.zip" ]; then
-            echo "⚠️ 本次运行未生成新的 posters.zip，尝试下载旧版本..."
-            gh release download latest -p "posters.zip" --clobber || echo "No posters.zip found"
-          fi
           
+          # 检查脚本是否成功生成了原始压缩包
           if [ -f "posters.zip" ]; then
-            mkdir -p posters_raw posters_final
-            unzip -o posters.zip -d posters_raw/
-            
-            # 运行你的标准化处理脚本
-            python process_posters.py
-            
-            if [ -d "posters_final" ] && [ "$(ls -A posters_final 2>/dev/null)" ]; then
-              cd posters_final && zip -rq ../fury_posters.zip ./* && cd ..
-              echo "✅ fury_posters.zip created."
-            else
-              echo "❌ 警告：posters_final 为空，请检查 process_posters.py 的逻辑"
-            fi
+            echo "HAS_ORIGINAL=true" >> $GITHUB_OUTPUT
           else
-            echo "❌ 错误：找不到任何 posters.zip，跳过处理步骤"
+            echo "HAS_ORIGINAL=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Warning: posters.zip not found after scraper run."
           fi
 
-      - name: Update Release
-        uses: softprops/action-gh-release@v2 # 建议升级到 v2
+      - name: Process Posters for Fury
+        if: steps.scraper.outputs.HAS_ORIGINAL == 'true'
+        env:
+          FURY_ID: ${{ vars.FURY_ID }}
+        run: |
+          # 1. 准备目录
+          mkdir -p posters_raw posters_final
+          
+          # 2. 解压原始图片
+          unzip -q -o posters.zip -d posters_raw/
+          
+          # 3. 运行处理脚本 (process_posters.py)
+          # 该脚本应读取 posters_raw/ 处理后存入 posters_final/
+          python process_posters.py
+          
+          # 4. 检查处理结果并打包
+          if [ -d "posters_final" ] && [ "$(ls -A posters_final 2>/dev/null)" ]; then
+            cd posters_final && zip -rq ../fury_posters.zip ./* && cd ..
+            echo "✅ fury_posters.zip created successfully."
+          else
+            echo "❌ Error: posters_final is empty. Check process_posters.py logic."
+          fi
+
+      - name: Save EPG Cache
+        uses: actions/cache/save@v3
+        if: always()
+        with:
+          path: epg_cache.json
+          key: ${{ runner.os }}-epg-cache-${{ github.run_id }}
+
+      - name: Update GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
+          name: "Latest SPTV EPG & Posters"
+          # 仅上传存在的文件，避免因某个文件缺失导致整个发布失败
           files: |
             epg_ultimate.xml.gz
             posters.zip
             fury_posters.zip
-          # 设置为 true 会覆盖同名文件，适合 "latest" 标签
-          overwrite: true 
           body: |
-            每日自动更新 SPTV 海报与 EPG
-            更新时间: ${{ github.event.head_commit.timestamp || 'Manual Trigger' }}
+            ### 自动更新报告
+            - **更新时间**: $(date '+%Y-%m-%d %H:%M:%S') (UTC)
+            - **包含内容**: 原始海报、Fury 适配版海报及最新 EPG 压缩包。
+          prerelease: false
+          # 覆盖已有文件
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Git Push Metadata
+        # 仅将 XML 或日志推回仓库（如果需要），此处建议只推 XML 压缩包
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # 只有文件变化时才提交
+          [ -f "epg_ultimate.xml.gz" ] && git add epg_ultimate.xml.gz
+          
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: auto update EPG data $(date +'%Y-%m-%d')"
+            # 5次重试逻辑解决冲突
+            for i in {1..5}; do
+              git pull --rebase origin main && git push origin main && break || sleep 10
+            done
+          else
+            echo "No data changes to commit."
+          fi
+
+      - name: Upload Artifacts (Internal Debug)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: debug-files
+          path: |
+            posters.zip
+            fury_posters.zip
+          retention-days: 1
