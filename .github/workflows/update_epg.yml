@@ -20,10 +20,11 @@ jobs:
         with:
           python-version: '3.10'
 
+      # --- 1. 安装所有依赖 (在这里加入 Pillow) ---
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests beautifulsoup4 lxml
+          pip install requests beautifulsoup4 lxml Pillow
 
       # --- 恢复 EPG 缓存 ---
       - name: Restore EPG Cache
@@ -34,33 +35,35 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-epg-cache-
 
-      # --- 1. 运行 EPG 爬虫 (EPG 保持原样) ---
+      # --- 2. 运行 EPG 爬虫 ---
       - name: Run EPG Scraper
         env:
           CHANNELS_JSON: ${{ vars.CHANNELS_JSON }}
         run: python skyperfectv_epg.py
 
-      # --- 2. 处理海报 (关键步骤) ---
+      # --- 3. 处理海报 (利用已安装的 Pillow) ---
       - name: Download & Process Posters
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # A. 从最新 Release 下载原始 posters.zip
-          # 使用 gh 命令直接下载，不需要第三方 Action
           gh release download latest -p "posters.zip" --clobber || echo "No posters.zip found in release"
           
           if [ -f "posters.zip" ]; then
-            # B. 解压到临时文件夹
+            # B. 准备文件夹
             mkdir -p posters_raw
+            mkdir -p posters_final
             unzip -o posters.zip -d posters_raw/
             
-            # C. 运行我们之前写好的清洗脚本 (确保 process_posters.py 已在仓库中)
+            # C. 运行清洗与图片处理脚本
             python process_posters.py
             
-            # D. 将清洗后的图片打包成新压缩包
-            cd posters_final
-            zip -r ../fury_posters.zip ./*
-            cd ..
+            # D. 打包 (增加检查防止空包)
+            if [ -d "posters_final" ]; then
+              cd posters_final
+              zip -r ../fury_posters.zip ./*
+              cd ..
+            fi
           else
             echo "Skipping poster processing as posters.zip is missing."
           fi
@@ -73,7 +76,7 @@ jobs:
           path: epg_cache.json
           key: ${{ runner.os }}-epg-cache-${{ github.run_id }}
 
-      # --- 3. 更新 Release (同时提供原始包和 Fury 专用包) ---
+      # --- 4. 更新 Release (分发 epg_ultimate.xml.gz, posters.zip, fury_posters.zip) ---
       - name: Update Release
         uses: softprops/action-gh-release@v1
         with:
@@ -86,7 +89,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # --- 4. 提交 EPG 到仓库 (可选) ---
+      # --- 5. 提交 EPG 到仓库 (可选) ---
       - name: Commit and Push
         run: |
           git config --local user.email "action@github.com"
@@ -102,7 +105,7 @@ jobs:
             fi
           fi
 
-      # --- 5. 发布 Artifacts (备份) ---
+      # --- 6. 发布 Artifacts (备份) ---
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
