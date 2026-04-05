@@ -1,118 +1,51 @@
-name: Auto Update EPG & Standardize Posters
-
-on:
-  schedule:
-    - cron: '0 19 * * *' # 每天北京时间凌晨3点
-  workflow_dispatch:      # 允许手动运行
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write 
-      
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # 获取完整历史以确保 rebase 成功
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests beautifulsoup4 lxml Pillow
-
-      - name: Restore EPG Cache
-        uses: actions/cache/restore@v3
-        with:
-          path: epg_cache.json
-          key: ${{ runner.os }}-epg-cache-
-          restore-keys: |
-            ${{ runner.os }}-epg-cache-
-
-      - name: Run EPG Scraper
+- name: Run EPG Scraper
+        id: run_epg  # 添加 ID 方便后续判断
         env:
           CHANNELS_JSON: ${{ vars.CHANNELS_JSON }}
-        run: python skyperfectv_epg.py
+        run: |
+          python skyperfectv_epg.py
+          # 确保脚本运行后，本地已经存在 posters.zip
 
-      - name: Download & Process Posters
+      - name: Process Posters (Standardize)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FURY_ID: ${{ vars.FURY_ID }} 
         run: |
-          gh release download latest -p "posters.zip" --clobber || echo "No posters.zip found"
+          # 优先使用本次脚本新生成的 zip，如果没有才尝试下载旧的（保底策略）
+          if [ ! -f "posters.zip" ]; then
+            echo "⚠️ 本次运行未生成新的 posters.zip，尝试下载旧版本..."
+            gh release download latest -p "posters.zip" --clobber || echo "No posters.zip found"
+          fi
           
           if [ -f "posters.zip" ]; then
             mkdir -p posters_raw posters_final
             unzip -o posters.zip -d posters_raw/
             
-            echo "--- 检查解压后的文件名 ---"
-            ls posters_raw | head -n 5
-            
+            # 运行你的标准化处理脚本
             python process_posters.py
-            
-            echo "--- 检查处理后的结果 ---"
-            ls -lh posters_final
             
             if [ -d "posters_final" ] && [ "$(ls -A posters_final 2>/dev/null)" ]; then
               cd posters_final && zip -rq ../fury_posters.zip ./* && cd ..
               echo "✅ fury_posters.zip created."
             else
-              echo "❌ 警告：posters_final 文件夹是空的！"
+              echo "❌ 警告：posters_final 为空，请检查 process_posters.py 的逻辑"
             fi
+          else
+            echo "❌ 错误：找不到任何 posters.zip，跳过处理步骤"
           fi
 
-      - name: Save EPG Cache
-        uses: actions/cache/save@v3
-        if: always() 
-        with:
-          path: epg_cache.json
-          key: ${{ runner.os }}-epg-cache-${{ github.run_id }}
-
       - name: Update Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2 # 建议升级到 v2
         with:
           tag_name: latest
           files: |
             epg_ultimate.xml.gz
             posters.zip
             fury_posters.zip
-          body: "每日自动更新 SPTV 海报 (包含 Fury 适配版) 与 EPG"
-          fail_on_unmatched_files: false # 核心：即使 fury_posters.zip 没生成也不报错
+          # 设置为 true 会覆盖同名文件，适合 "latest" 标签
+          overwrite: true 
+          body: |
+            每日自动更新 SPTV 海报与 EPG
+            更新时间: ${{ github.event.head_commit.timestamp || 'Manual Trigger' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Commit and Push
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          
-          # 仅在文件存在时添加
-          [ -f "epg_ultimate.xml" ] && git add epg_ultimate.xml
-          [ -f "epg_ultimate.xml.gz" ] && git add epg_ultimate.xml.gz
-          
-          if ! git diff --staged --quiet; then
-            git commit -m "Daily EPG Update $(date +'%Y-%m-%d')"
-            # 增加重试逻辑处理并发推送冲突
-            for i in {1..5}; do
-              git pull --rebase origin main && git push origin main && break || sleep 10
-            done
-          else
-            echo "No changes to commit."
-          fi
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: SPTV-EPG-Pack
-          path: |
-            epg_ultimate.xml.gz
-            posters.zip
-            fury_posters.zip
-          if-no-files-found: warn
-          retention-days: 1
