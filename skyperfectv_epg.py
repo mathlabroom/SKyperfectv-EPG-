@@ -120,29 +120,64 @@ class SkyPerfectUltimate:
         return progs
 
     def download_to_zip(self, all_progs):
+        import os
+        import datetime
+        import zipfile
+        from concurrent.futures import ThreadPoolExecutor
+
         poster_dir = "posters"
-        if not os.path.exists(poster_dir): os.makedirs(poster_dir)
-        now = datetime.datetime.now()
+        zip_name = "posters.zip"
+        
+        # 确保目录存在且为空
+        if not os.path.exists(poster_dir): 
+            os.makedirs(poster_dir)
         
         def _down(p):
-            url, start_raw, ch_num = p.get('icon'), p.get('start'), p.get('ch_num')
-            if not url or not start_raw: return
+            url = p.get('icon')
+            start_raw = p.get('start')
+            ch_num = p.get('ch_num')
+            
+            if not url or not start_raw: 
+                return
+            
             try:
-                time_tag = start_raw.split(' ')[0][:12] # 202604051800
+                # 格式化文件名：频道_时间.jpg
+                time_tag = start_raw.split(' ')[0][:12] 
                 filename = f"CH.{ch_num}_{time_tag}.jpg"
                 path = os.path.join(poster_dir, filename)
-                if os.path.exists(path): return
+                
+                # 如果文件已存在则跳过
+                if os.path.exists(path): 
+                    return
+                
                 r = self.session.get(url, timeout=10)
                 if r.status_code == 200:
-                    with open(path, 'wb') as f: f.write(r.content)
-            except: pass
+                    with open(path, 'wb') as f: 
+                        f.write(r.content)
+            except Exception as e:
+                print(f"下载失败 {url}: {e}")
 
-        with ThreadPoolExecutor(max_workers=20) as executor:
+        # 使用线程池并发下载
+        print(f"开始下载图片，共 {len(all_progs)} 个条目...")
+        with ThreadPoolExecutor(max_workers=15) as executor:
             executor.map(_down, all_progs)
         
-        with zipfile.ZipFile('posters.zip', 'w', zipfile.ZIP_DEFLATED) as z:
-            for file in os.listdir(poster_dir):
-                z.write(os.path.join(poster_dir, file), file)
+        # 打包成 ZIP
+        if os.listdir(poster_dir):
+            with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as z:
+                for file in os.listdir(poster_dir):
+                    z.write(os.path.join(poster_dir, file), file)
+            print(f"打包完成: {zip_name}")
+        else:
+            print("没有下载到任何新图片。")
+
+        # --- 关键：输出 Tag 给 GitHub Actions ---
+        tag_name = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+        if 'GITHUB_OUTPUT' in os.environ:
+            with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+                # 这里定义了两个输出变量，供 Actions 使用
+                print(f"RELEASE_TAG=EPG_{tag_name}", file=fh)
+                print(f"HAS_POSTERS={'true' if os.path.exists(zip_name) else 'false'}", file=fh)
 
     def run(self):
         all_progs = []
