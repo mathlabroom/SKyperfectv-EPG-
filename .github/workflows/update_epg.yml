@@ -45,25 +45,26 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FURY_ID: ${{ vars.FURY_ID }} 
         run: |
-          # A. 下载原始海报 (使用 --fail 确保文件不存在时不报错)
-          gh release download latest -p "posters.zip" --clobber || echo "No posters.zip found in latest release."
+          gh release download latest -p "posters.zip" --clobber || echo "No posters.zip found"
           
           if [ -f "posters.zip" ]; then
             mkdir -p posters_raw posters_final
             unzip -o posters.zip -d posters_raw/
             
-            # B. 运行处理脚本
+            echo "--- 检查解压后的文件名 ---"
+            ls posters_raw | head -n 5
+            
             python process_posters.py
             
-            # C. 打包 Fury 版本 (加上 -q 减少日志，并检查目录)
+            echo "--- 检查处理后的结果 ---"
+            ls -lh posters_final
+            
             if [ -d "posters_final" ] && [ "$(ls -A posters_final 2>/dev/null)" ]; then
               cd posters_final && zip -rq ../fury_posters.zip ./* && cd ..
               echo "✅ fury_posters.zip created."
             else
-              echo "⚠️ posters_final is empty. Skipping fury_posters.zip."
+              echo "❌ 警告：posters_final 文件夹是空的！"
             fi
-          else
-            echo "❌ posters.zip not found. Skipping poster processing."
           fi
 
       - name: Save EPG Cache
