@@ -7,12 +7,18 @@ from PIL import Image, ImageFilter
 
 # --- 获取 GitHub Actions 变量 ---
 def get_fury_mapping():
-    raw_var = os.getenv('FURY_ID', '{}')
+    raw_var = os.getenv('FURY_ID', '{}').strip()
+    print(f"DEBUG: Raw FURY_ID from env: '{raw_var}'") # 确认环境变量是否真的传进来了
+    
     try:
-        # 兼容 "FURY_ID = {..." 格式
-        if 'FURY_ID =' in raw_var:
+        # 强制清理：去掉可能的 FURY_ID = 前缀
+        if '=' in raw_var:
             raw_var = raw_var.split('=', 1)[1].strip()
-        return ast.literal_eval(raw_var)
+        
+        # 尝试解析
+        mapping = ast.literal_eval(raw_var)
+        print(f"DEBUG: Parsed mapping keys: {list(mapping.keys())}")
+        return mapping
     except Exception as e:
         print(f"❌ 变量解析失败: {e}")
         return {}
@@ -44,22 +50,44 @@ def main():
     raw_dir, final_dir = "posters_raw", "posters_final"
     os.makedirs(final_dir, exist_ok=True)
     
-    for filename in os.listdir(raw_dir):
-        # 匹配 CH.频道号_时间戳
+    # 检查路径是否存在
+    if not os.path.exists(raw_dir):
+        print(f"❌ 错误: 找不到目录 {raw_dir}")
+        return
+
+    files = os.listdir(raw_dir)
+    print(f"DEBUG: Found {len(files)} files in {raw_dir}")
+    
+    for filename in files:
+        # 增加对后缀的检查，避免匹配到临时文件
         match = re.search(r'(CH\.\d+)_(\d{12})', filename)
+        
         if match:
             ch_tag, time_str = match.groups()
             f_hash = FURY_MAP.get(ch_tag)
             
-            if f_hash:
-                try:
-                    dt = datetime.strptime(time_str, "%Y%m%d%H%M")
-                    ts = int(time.mktime(dt.timetuple()))
-                    new_name = f"{f_hash}_{ts}.jpg"
+            if not f_hash:
+                # print(f"DEBUG: No hash for {ch_tag}, skipping...")
+                continue
+
+            try:
+                # 转换时间戳
+                dt = datetime.strptime(time_str, "%Y%m%d%H%M")
+                ts = int(time.mktime(dt.timetuple()))
+                
+                new_name = f"{f_hash}_{ts}.jpg"
+                src_path = os.path.join(raw_dir, filename)
+                dst_path = os.path.join(final_dir, new_name)
+
+                if process_image(src_path, dst_path):
+                    print(f"✅ 转换完成: {filename} -> {new_name}")
+                else:
+                    print(f"❌ 处理失败: {filename}")
                     
-                    if process_image(os.path.join(raw_dir, filename), os.path.join(final_dir, new_name)):
-                        print(f"✅ 转换完成: {new_name}")
-                except: continue
+            except Exception as e:
+                print(f"⚠️ 处理 {filename} 时出错: {e}")
+                continue
 
 if __name__ == "__main__":
+    # 假设 FURY_MAP 和 process_image 已经定义
     main()
