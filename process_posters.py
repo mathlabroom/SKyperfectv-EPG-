@@ -70,30 +70,28 @@ def main():
     dst_dir = "posters_final"
     os.makedirs(dst_dir, exist_ok=True)
     
-    # 假设你的原始文件名格式是: SID_YYYYMMDDHHMM.jpg (例如 8220_202604051800.jpg)
     for root, dirs, files in os.walk(src_dir):
         for filename in files:
-            if filename.startswith('.') or not filename.lower().endswith(('.jpg', '.png', '.jpeg')):
+            if filename.startswith('.') or not filename.lower().endswith(('.jpg', '.png')):
                 continue
             
-            # 解析原始文件名 (这里需要匹配你爬虫下载时的命名规则)
-            # 建议下载时保存为: SID_时间.jpg
-            match = re.match(r'^([0-9A-F]+)_(\d{12})', filename, re.I)
+            # 假设你的文件名格式是 "CH.518_202604051800.jpg"
+            # 如果不是这个格式，请修改下面的正则匹配
+            match = re.search(r'(CH\.\d+)_(\d{12})', filename)
             
             if match:
-                sid_part = match.group(1)
+                ch_tag = match.group(1)
                 time_part = match.group(2)
                 
-                new_base_name = get_fury_name(sid_part, time_part)
+                new_base = get_fury_filename(ch_tag, time_part)
                 
-                if new_base_name:
-                    dst_path = os.path.join(dst_dir, f"{new_base_name}.jpg")
+                if new_base:
                     src_path = os.path.join(root, filename)
+                    dst_path = os.path.join(dst_dir, f"{new_base}.jpg")
                     
                     if process_image(src_path, dst_path):
-                        print(f"Done: {filename} -> {new_base_name}.jpg")
-                else:
-                    print(f"Skip: 映射表里没找到 SID {sid_part}")
+                        print(f"Matched: {ch_tag} -> {new_base}.jpg")
+                    continue
             else:
                 # 如果没匹配到 SID 格式，走你之前的标题清洗逻辑作为备选
                 name_part = os.path.splitext(filename)[0]
