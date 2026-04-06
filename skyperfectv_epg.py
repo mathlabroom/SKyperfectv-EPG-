@@ -76,24 +76,45 @@ class SkyPerfectUltimate:
                 print(f"❌ 写入缓存文件失败: {e}")
 
     def parse_japanese_time(self, date_raw, time_range_str):
-        # ... [解析逻辑保持不变] ...
         try:
+            # 1. 提取月/日
             date_match = re.search(r'(\d{1,2})/(\d{1,2})', date_raw)
             if not date_match: return None, None
             month, day = int(date_match.group(1)), int(date_match.group(2))
-            now = datetime.datetime.now()
-            year = now.year
-            if now.month == 12 and month == 1: year += 1
+            
+            # 2. 强制使用日本时区确定年份，防止 GitHub 服务器时差导致跨年失败
+            # JST 是 UTC+9
+            jst_now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+            year = jst_now.year
+            
+            # 核心跨年逻辑：如果现在是 12 月，抓到的是 1 月，年份 +1
+            if jst_now.month == 12 and month == 1:
+                year += 1
+            # 防御逻辑：如果现在是 1 月，抓到的是 12 月（历史数据），年份 -1
+            elif jst_now.month == 1 and month == 12:
+                year -= 1
+                
             base_dt = datetime.datetime(year, month, day)
+
+            # 3. 提取时间
             time_parts = re.findall(r'(\d{1,2}:\d{2})', time_range_str)
             if len(time_parts) < 2: return None, None
-            start_hh, start_mm = map(int, time_parts[0].split(':'))
-            end_hh, end_mm = map(int, time_parts[1].split(':'))
-            start_dt = base_dt + timedelta(hours=start_hh, minutes=start_mm)
-            end_dt = base_dt + timedelta(hours=end_hh, minutes=end_mm)
-            if end_dt <= start_dt: end_dt += timedelta(days=1)
-            return (start_dt.strftime("%Y%m%d%H%M00 +0900"), end_dt.strftime("%Y%m%d%H%M00 +0900"))
-        except: return None, None
+            
+            sh, sm = map(int, time_parts[0].split(':'))
+            eh, em = map(int, time_parts[1].split(':'))
+            
+            # 4. 使用 timedelta 替代 replace，这样即使 sh >= 24 也能自动进位，更稳健
+            start_dt = base_dt + datetime.timedelta(hours=sh, minutes=sm)
+            end_dt = base_dt + datetime.timedelta(hours=eh, minutes=em)
+            
+            # 5. 处理跨子夜 (例如 23:00 ～ 01:00)
+            if end_dt <= start_dt:
+                end_dt += datetime.timedelta(days=1)
+                
+            return (start_dt.strftime("%Y%m%d%H%M00 +0900"), 
+                    end_dt.strftime("%Y%m%d%H%M00 +0900"))
+        except:
+            return None, None
 
     def fetch_detail(self, url, srv_ref, referer, icon_url, ch_num):
         if url in self.cache:
