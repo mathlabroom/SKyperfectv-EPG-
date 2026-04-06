@@ -274,12 +274,13 @@ class SkyPerfectUltimate:
         if not os.path.exists(poster_dir): os.makedirs(poster_dir)
         
         now = datetime.datetime.now()
+        # 保持 48 小时活跃期
         time_limit = datetime.timedelta(hours=48)
 
         def _down(p):
             url = p.get('icon')
             start_raw = p.get('start') 
-            ch_num = p.get('ch_num') # 🚩 这里现在能拿到值了
+            ch_num = p.get('ch_num') 
             
             if not url or not start_raw or not ch_num: return
             
@@ -287,33 +288,35 @@ class SkyPerfectUltimate:
                 time_digits = "".join(filter(str.isdigit, start_raw))[:12]
                 prog_time = datetime.datetime.strptime(time_digits, "%Y%m%d%H%M")
 
+                # 【逻辑 1】只处理 48 小时内的节目图片，太旧或太远的都不下
                 if abs((now - prog_time).total_seconds()) > (time_limit.total_seconds() + 28800):
                     return 
 
-                # 使用 ch_num 命名
                 filename = f"CH.{ch_num}_{time_digits}.jpg"
                 path = os.path.join(poster_dir, filename)
                 
+                # 【逻辑 2】双轨制核心：只要文件夹里没有，就算缓存里有过也要重下
+                # 配合 .yml 里的 rm -rf，这就是“强制全量刷新”的开关
                 if os.path.exists(path): return
                 
+                # 这里的 session 抓取不会受到 epg_cache.json 的干扰
                 r = self.session.get(url, timeout=10)
                 if r.status_code == 200:
                     with open(path, 'wb') as f: 
                         f.write(r.content)
             except: pass 
 
-        # --- ✨ 关键修正位置在这里 ---
-        # 1. 过滤掉不完整的数据，防止 KeyError
+        # 过滤并去重
         valid_progs = [p for p in all_progs if p and p.get('icon') and p.get('ch_num') and p.get('start')]
-        
-        # 2. 去重逻辑（使用字典推导式，以 频道+时间 为 Key）
+        # 以 (频道, 时间) 为唯一标识
         unique_progs = { (p['ch_num'], p['start']): p for p in valid_progs }.values()
 
-        print(f"🚀 正在筛选 48h 内的图片并下载 (有效目标: {len(unique_progs)})...")
+        print(f"🚀 正在核对本地文件并补全图片 (目标: {len(unique_progs)})...")
         
         with ThreadPoolExecutor(max_workers=15) as executor:
             executor.map(_down, unique_progs)
         
+        # 打包逻辑保持不变
         if os.path.exists(poster_dir) and os.listdir(poster_dir):
             with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as z:
                 for file in os.listdir(poster_dir):
