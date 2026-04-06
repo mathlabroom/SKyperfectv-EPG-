@@ -98,11 +98,14 @@ class SkyPerfectUltimate:
     def fetch_detail(self, url, srv_ref, referer, icon_url, ch_num):
         if url in self.cache:
             data = self.cache[url].copy()
-            # 如果旧缓存没图片，这次顺便补上
-            if icon_url and 'icon' not in data:
-                data['icon'] = icon_url
-                with self.lock: self.cache[url]['icon'] = icon_url
             data['ref'] = srv_ref
+            data['ch_num'] = ch_num
+            
+            # 🚩 关键修改：如果这次从列表页传来了 icon_url，而缓存里没有或为空，一定要补上
+            if icon_url and not data.get('icon'):
+                data['icon'] = icon_url
+                with self.lock:
+                    self.cache[url]['icon'] = icon_url # 同步更新持久化缓存
             return data
 
         try:
