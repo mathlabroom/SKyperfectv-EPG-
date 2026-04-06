@@ -36,20 +36,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-epg-cache-
 
+      # 新增：获取北京时间并存入环境变量，供后续所有步骤使用
+      - name: Get Beijing Time
+        run: echo "BJ_TIME=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
+
       - name: Run EPG Scraper & Download Original Posters
         id: scraper
         env:
           CHANNELS_JSON: ${{ vars.CHANNELS_JSON }}
         run: |
-          # 运行你的主脚本，该脚本应在根目录生成 posters.zip 和 epg_ultimate.xml.gz
           python skyperfectv_epg.py
-          
-          # 检查脚本是否成功生成了原始压缩包
           if [ -f "posters.zip" ]; then
             echo "HAS_ORIGINAL=true" >> $GITHUB_OUTPUT
           else
             echo "HAS_ORIGINAL=false" >> $GITHUB_OUTPUT
-            echo "⚠️ Warning: posters.zip not found after scraper run."
+            echo "⚠️ Warning: posters.zip not found."
           fi
 
       - name: Process Posters for Fury
@@ -57,22 +58,15 @@ jobs:
         env:
           FURY_ID: ${{ vars.FURY_ID }}
         run: |
-          # 1. 准备目录
           mkdir -p posters_raw posters_final
-          
-          # 2. 解压原始图片
           unzip -q -o posters.zip -d posters_raw/
-          
-          # 3. 运行处理脚本 (process_posters.py)
-          # 该脚本应读取 posters_raw/ 处理后存入 posters_final/
           python process_posters.py
-          
-          # 4. 检查处理结果并打包
           if [ -d "posters_final" ] && [ "$(ls -A posters_final 2>/dev/null)" ]; then
             cd posters_final && zip -rq ../fury_posters.zip ./* && cd ..
-            echo "✅ fury_posters.zip created successfully."
+            echo "✅ fury_posters.zip created."
           else
-            echo "❌ Error: posters_final is empty. Check process_posters.py logic."
+            echo "❌ Error: posters_final is empty."
+            exit 1
           fi
 
       - name: Save EPG Cache
@@ -87,33 +81,27 @@ jobs:
         with:
           tag_name: latest
           name: "Latest SPTV EPG & Posters"
-          # 仅上传存在的文件，避免因某个文件缺失导致整个发布失败
           files: |
             epg_ultimate.xml.gz
             posters.zip
             fury_posters.zip
+          # 使用 ${{ env.BJ_TIME }} 替换之前的 $(date) 源码
           body: |
             ### 自动更新报告
-            - **更新时间**: $(date '+%Y-%m-%d %H:%M:%S') (UTC)
+            - **更新时间**: ${{ env.BJ_TIME }} (北京时间)
             - **包含内容**: 原始海报、Fury 适配版海报及最新 EPG 压缩包。
           prerelease: false
-          # 覆盖已有文件
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Git Push Metadata
-        # 仅将 XML 或日志推回仓库（如果需要），此处建议只推 XML 压缩包
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          
-          # 只有文件变化时才提交
           [ -f "epg_ultimate.xml.gz" ] && git add epg_ultimate.xml.gz
-          
           if ! git diff --staged --quiet; then
-            git commit -m "chore: auto update EPG data $(date +'%Y-%m-%d')"
-            # 5次重试逻辑解决冲突
+            git commit -m "chore: auto update EPG data ${{ env.BJ_TIME }}"
             for i in {1..5}; do
               git pull --rebase origin main && git push origin main && break || sleep 10
             done
