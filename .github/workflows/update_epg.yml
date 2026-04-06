@@ -88,13 +88,16 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
+          # 🚩 关键新增：强制将标签指向当前的 Commit 节点
+          target_commitish: ${{ github.sha }} 
           name: "Latest SPTV EPG & Posters"
+          # 🚩 关键新增：强制更新现有的标签
+          force_update: true 
           files: |
             epg_ultimate.xml.gz
             epg_ultimate.xml
             posters.zip
             fury_posters.zip
-          # 使用 ${{ env.BJ_TIME }} 替换之前的 $(date) 源码
           body: |
             ### 自动更新报告
             - **更新时间**: ${{ env.BJ_TIME }} (北京时间)
@@ -103,7 +106,6 @@ jobs:
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Skip Git Push
         run: |
           echo "✅ 任务执行完毕"
