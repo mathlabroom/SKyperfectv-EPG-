@@ -108,7 +108,7 @@ class SkyPerfectUltimate:
             end_dt = base_dt + datetime.timedelta(hours=eh, minutes=em)
             
             # 5. 处理跨子夜 (例如 23:00 ～ 01:00)
-            if end_dt <= start_dt:
+            if sh > eh:
                 end_dt += datetime.timedelta(days=1)
                 
             return (start_dt.strftime("%Y%m%d%H%M00 +0900"), 
@@ -138,12 +138,28 @@ class SkyPerfectUltimate:
             title_tag = soup.find('h1')
             title = title_tag.get_text(strip=True) if title_tag else "No Title"
 
+            # --- 替换开始 ---
             time_el = soup.find('p', class_='p-info__time') or soup.find(string=re.compile(r'\d{1,2}/\d{1,2}.*?\d{2}:\d{2}'))
             if not time_el: return None
-            dt_m = re.search(r'(\d{1,2}/\d{1,2}).*?(\d{2}:\d{2}).*?(\d{2}:\d{2})', time_el.get_text(strip=True))
-            if not dt_m: return None
-            start_xml, stop_xml = self.parse_japanese_time(dt_m.group(1), f"{dt_m.group(2)}～{dt_m.group(3)}")
-
+            
+            raw_time_text = time_el.get_text(strip=True)
+            
+            # 1. 精准提取日期 (例如 04/06)
+            date_match = re.search(r'(\d{1,2}/\d{1,2})', raw_time_text)
+            if not date_match: return None
+            date_raw = date_match.group(1)
+            
+            # 2. 限制搜索范围：只在日期后的 30 个字符内找【开始】和【结束】时间
+            # 这样绝对不会勾到页面底部的 UID、URL 或其他节目的数字
+            search_area = raw_time_text[date_match.end() : date_match.end() + 35]
+            times = re.findall(r'(\d{1,2}:\d{2})', search_area)
+            
+            if len(times) < 2: return None
+            
+            # 3. 此时 times[0] 是 15:00, times[1] 是 18:00
+            start_xml, stop_xml = self.parse_japanese_time(date_raw, f"{times[0]}～{times[1]}")
+            # --- 替换结束 ---
+            
             parts = []
             main_d = soup.find('div', class_='p-info__detail')
             if main_d and main_d.p: parts.append(main_d.p.get_text(strip=True).replace('もっと見る', ''))
@@ -246,30 +262,6 @@ class SkyPerfectUltimate:
             print(f"❌ {name:<20} 发生错误: {e}", flush=True)
             
         return progs
-
-    def sort_epg(self, file_path):
-        """专门负责对生成的 XML 进行清洗和排序"""
-        try:
-            tree = ET.parse(file_path)
-            root = tree.getroot()
-
-            # 1. 提取标签
-            channels = root.findall('channel')
-            programmes = root.findall('programme')
-
-            # 2. 核心排序：先按频道 ID 升序，同频道按时间升序
-            programmes.sort(key=lambda x: (x.get('channel', ''), x.get('start', '')))
-
-            # 3. 重组 XML 树
-            # 这种写法比循环 remove 更简洁高效
-            new_children = channels + programmes
-            root[:] = new_children 
-
-            # 4. 写回文件
-            tree.write(file_path, encoding='utf-8', xml_declaration=True)
-            print(f"✅ EPG 排序完成：已按频道和时间重组 {len(programmes)} 条节目。")
-        except Exception as e:
-            print(f"❌ 排序失败: {e}")
             
     def download_to_zip(self, all_progs):
         import os
