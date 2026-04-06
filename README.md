@@ -4,3 +4,9 @@
 3. 本脚本对图片进行了毛玻璃处理，使其尽量适配Fury海报比例。
 <img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/12185c41-aa54-41b0-a3f9-8063a1dbc868" />
 <img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/64714ff7-5122-40c9-b1cc-acf7051d29a4" />
+#下载链接
+1. EPG
+https://github.com/mathlabroom/SKyperfectv-EPG-/releases/download/latest/epg_ultimate.xml
+https://github.com/mathlabroom/SKyperfectv-EPG-/releases/download/latest/epg_ultimate.xml.gz
+3. Posters  海报
+https://github.com/mathlabroom/SKyperfectv-EPG-/releases/download/latest/fury_posters.zip
