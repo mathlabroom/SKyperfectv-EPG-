@@ -95,7 +95,7 @@ class SkyPerfectUltimate:
             return (start_dt.strftime("%Y%m%d%H%M00 +0900"), end_dt.strftime("%Y%m%d%H%M00 +0900"))
         except: return None, None
 
-    def fetch_detail(self, url, srv_ref, referer, icon_url=None):
+    def fetch_detail(self, url, srv_ref, referer, icon_url, ch_num):
         if url in self.cache:
             data = self.cache[url].copy()
             # 如果旧缓存没图片，这次顺便补上
