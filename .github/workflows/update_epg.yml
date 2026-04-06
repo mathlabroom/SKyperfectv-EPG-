@@ -96,26 +96,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Git Push Metadata
+      - name: Skip Git Push
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          
-          # 🚩 核心修改：把 xml 和 gz 都添加进来
-          [ -f "epg_ultimate.xml" ] && git add epg_ultimate.xml
-          [ -f "epg_ultimate.xml.gz" ] && git add epg_ultimate.xml.gz
-          
-          # 检查是否有文件变更
-          if ! git diff --staged --quiet; then
-            git commit -m "chore: auto update EPG data ${{ env.BJ_TIME }}"
-            for i in {1..5}; do
-              # 自动拉取远程更改防止冲突
-              git pull --rebase origin main
-              git push origin main && break || sleep 10
-            done
-          else
-            echo "✅ 数据未发生变化，无需推送仓库。"
-          fi
+          echo "✅ 任务执行完毕"
+          echo "📦 原始 XML 和 GZ 压缩包已准备就绪"
+          echo "🖼️ 节目海报已打包完成"
+          echo "🚀 所有产物已上传至 Release 页面，跳过仓库推送以保持 Git 干净。"
 
       - name: Upload Artifacts (Internal Debug)
         uses: actions/upload-artifact@v4
