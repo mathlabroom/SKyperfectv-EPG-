@@ -6,7 +6,7 @@
 <img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/64714ff7-5122-40c9-b1cc-acf7051d29a4" />
 #下载链接
 1. EPG
-https://github.com/mathlabroom/SKyperfectv-EPG-/releases/download/latest/epg_ultimate.xml
-https://github.com/mathlabroom/SKyperfectv-EPG-/releases/download/latest/epg_ultimate.xml.gz
-3. Posters  海报
+1)https://github.com/mathlabroom/SKyperfectv-EPG-/releases/download/latest/epg_ultimate.xml
+2)https://github.com/mathlabroom/SKyperfectv-EPG-/releases/download/latest/epg_ultimate.xml.gz
+2. Posters  海报
 https://github.com/mathlabroom/SKyperfectv-EPG-/releases/download/latest/fury_posters.zip
