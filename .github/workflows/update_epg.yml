@@ -83,6 +83,7 @@ jobs:
           name: "Latest SPTV EPG & Posters"
           files: |
             epg_ultimate.xml.gz
+            epg_ultimate.xml
             posters.zip
             fury_posters.zip
           # 使用 ${{ env.BJ_TIME }} 替换之前的 $(date) 源码
