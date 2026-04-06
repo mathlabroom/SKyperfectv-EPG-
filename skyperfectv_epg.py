@@ -155,7 +155,9 @@ class SkyPerfectUltimate:
             'desc': clean_desc, 
             'start': start_xml, 
             'stop': stop_xml,
-            'icon': icon_url  # 🎯 存入图片
+            'icon': icon_url,
+            'ch_num': ch_num,  # 🚩 核心：存入频道 ID，用于图片命名
+            'ref': srv_ref     # 🚩 核心：存入 Ref，用于 XML 匹配
         }
             
             # --- 线程安全地写入缓存 ---
@@ -204,7 +206,7 @@ class SkyPerfectUltimate:
                         cached_count += 1
                     
                     # 3. 提交任务给 fetch_detail (它会处理剩下的详情页抓取和清洗)
-                    futures.append(executor.submit(self.fetch_detail, full_url, srv_ref, url, icon_url))
+                    futures.append(executor.submit(self.fetch_detail, full_url, srv_ref, url, icon_url, ch_num))
                 
                 # 收集结果
                 for f in as_completed(futures):
@@ -255,50 +257,47 @@ class SkyPerfectUltimate:
         zip_name = "posters.zip"
         if not os.path.exists(poster_dir): os.makedirs(poster_dir)
         
-        # 1. 获取当前时间（注意：GitHub Actions 是 UTC 时间，日本 EPG 是 +0900）
-        # 为了保险，我们统一转为 UTC 比较，或者简单地对比前 12 位数字
         now = datetime.datetime.now()
         time_limit = datetime.timedelta(hours=48)
 
         def _down(p):
             url = p.get('icon')
-            start_raw = p.get('start') # 格式: "20260405180000 +0900"
-            ch_num = p.get('ch_num')
+            start_raw = p.get('start') 
+            ch_num = p.get('ch_num') # 🚩 这里现在能拿到值了
             
-            if not url or not start_raw: return
+            if not url or not start_raw or not ch_num: return
             
             try:
-                # 2. 解析时间：取前 12 位数字 (YYYYMMDDHHMM)
                 time_digits = "".join(filter(str.isdigit, start_raw))[:12]
                 prog_time = datetime.datetime.strptime(time_digits, "%Y%m%d%H%M")
 
-                # 3. 时间过滤：只下载最近 48 小时的
-                # 这里加了 8 小时偏移以适配 GitHub(UTC) 与 日本(+0900) 的时差
                 if abs((now - prog_time).total_seconds()) > (time_limit.total_seconds() + 28800):
                     return 
 
-                # 4. 构造文件名
+                # 使用 ch_num 命名
                 filename = f"CH.{ch_num}_{time_digits}.jpg"
                 path = os.path.join(poster_dir, filename)
                 
                 if os.path.exists(path): return
                 
-                # 使用 session 下载以保持连接池性能
                 r = self.session.get(url, timeout=10)
                 if r.status_code == 200:
                     with open(path, 'wb') as f: 
                         f.write(r.content)
-            except Exception as e:
-                pass 
+            except: pass 
 
-        print(f"🚀 正在筛选 48h 内的图片并下载...")
-        # 你的 all_progs 可能包含重复条目，先去重可以提速
-        unique_progs = { (p['ch_num'], p['start']): p for p in all_progs if p.get('icon') }.values()
+        # --- ✨ 关键修正位置在这里 ---
+        # 1. 过滤掉不完整的数据，防止 KeyError
+        valid_progs = [p for p in all_progs if p and p.get('icon') and p.get('ch_num') and p.get('start')]
+        
+        # 2. 去重逻辑（使用字典推导式，以 频道+时间 为 Key）
+        unique_progs = { (p['ch_num'], p['start']): p for p in valid_progs }.values()
 
+        print(f"🚀 正在筛选 48h 内的图片并下载 (有效目标: {len(unique_progs)})...")
+        
         with ThreadPoolExecutor(max_workers=15) as executor:
             executor.map(_down, unique_progs)
         
-        # 5. 打包逻辑
         if os.path.exists(poster_dir) and os.listdir(poster_dir):
             with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as z:
                 for file in os.listdir(poster_dir):
