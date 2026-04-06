@@ -166,7 +166,7 @@ class SkyPerfectUltimate:
             return result
         except: return None
 
-def fetch_channel(self, ch_num, srv_ref, name):
+    def fetch_channel(self, ch_num, srv_ref, name):
         # 基础 URL
         url = f"{self.base_url}/program/schedule/premium/channel:{ch_num}/"
         progs = []
