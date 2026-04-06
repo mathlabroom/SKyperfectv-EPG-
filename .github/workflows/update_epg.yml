@@ -40,6 +40,12 @@ jobs:
       - name: Get Beijing Time
         run: echo "BJ_TIME=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
 
+      - name: Clear old posters
+        run: |
+          mkdir -p posters_raw posters_final # 确保文件夹存在，防止 rm 报错
+          rm -rf posters_raw/*
+          rm -rf posters_final/*
+          
       - name: Run EPG Scraper & Download Original Posters
         id: scraper
         env:
@@ -65,8 +71,10 @@ jobs:
             cd posters_final && zip -rq ../fury_posters.zip ./* && cd ..
             echo "✅ fury_posters.zip created."
           else
-            echo "❌ Error: posters_final is empty."
-            exit 1
+            # 如果没新图，创建一个空文件占位，防止后面上传步骤报错
+            echo "⚠️ 本次运行没有新海报，生成占位包"
+            touch posters_final/placeholder.txt
+            zip -rq fury_posters.zip posters_final/placeholder.txt
           fi
 
       - name: Save EPG Cache
