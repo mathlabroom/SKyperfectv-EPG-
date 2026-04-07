@@ -267,61 +267,85 @@ class SkyPerfectUltimate:
         import os
         import datetime
         import zipfile
+        import hashlib
+        from io import BytesIO
+        from PIL import Image, ImageFilter
         from concurrent.futures import ThreadPoolExecutor
 
         poster_dir = "posters"
         zip_name = "posters.zip"
         if not os.path.exists(poster_dir): os.makedirs(poster_dir)
         
+        # 建立一个内存中的 MD5 映射表，用于追踪已处理的图片内容
+        # 格式: { md5: 磁盘上的第一个文件名 }
+        processed_md5_map = {}
+        md5_lock = threading.Lock()
+
         now = datetime.datetime.now()
-        # 保持 48 小时活跃期
         time_limit = datetime.timedelta(hours=48)
+
+        def _process_and_save(image_content, target_path):
+            """执行毛玻璃处理并保存"""
+            try:
+                with Image.open(BytesIO(image_content)) as img:
+                    img = img.convert('RGB')
+                    target_w, target_h = 320, 480
+                    # 背景模糊
+                    bg = img.resize((target_w, target_h), Image.Resampling.LANCZOS).filter(ImageFilter.GaussianBlur(radius=25))
+                    # 前景缩放并居中
+                    scale_h = int(img.height * (target_w / img.width))
+                    fg = img.resize((target_w, scale_h), Image.Resampling.LANCZOS)
+                    bg.paste(fg, (0, (target_h - scale_h) // 2))
+                    # 保存成品
+                    bg.save(target_path, "JPEG", quality=85, optimize=True)
+                return True
+            except: return False
 
         def _down(p):
             url = p.get('icon')
             start_raw = p.get('start') 
             ch_num = p.get('ch_num') 
-            
             if not url or not start_raw or not ch_num: return
             
             try:
                 time_digits = "".join(filter(str.isdigit, start_raw))[:12]
                 prog_time = datetime.datetime.strptime(time_digits, "%Y%m%d%H%M")
-
-                # 【逻辑 1】只处理 48 小时内的节目图片，太旧或太远的都不下
                 if abs((now - prog_time).total_seconds()) > (time_limit.total_seconds() + 28800):
                     return 
 
                 filename = f"CH.{ch_num}_{time_digits}.jpg"
                 path = os.path.join(poster_dir, filename)
-                
-                # 【逻辑 2】双轨制核心：只要文件夹里没有，就算缓存里有过也要重下
-                # 配合 .yml 里的 rm -rf，这就是“强制全量刷新”的开关
                 if os.path.exists(path): return
                 
-                # 这里的 session 抓取不会受到 epg_cache.json 的干扰
                 r = self.session.get(url, timeout=10)
                 if r.status_code == 200:
-                    with open(path, 'wb') as f: 
-                        f.write(r.content)
+                    # 1. 计算原始图片的 MD5
+                    raw_md5 = hashlib.md5(r.content).hexdigest()
+                    
+                    with md5_lock:
+                        if raw_md5 in processed_md5_map:
+                            # 2. 如果内容已存在，创建硬链接（相同内容，不同名字）
+                            os.link(processed_md5_map[raw_md5], path)
+                        else:
+                            # 3. 第一次见到，进行毛玻璃处理并保存
+                            if _process_and_save(r.content, path):
+                                processed_md5_map[raw_md5] = path
             except: pass 
 
-        # 过滤并去重
         valid_progs = [p for p in all_progs if p and p.get('icon') and p.get('ch_num') and p.get('start')]
-        # 以 (频道, 时间) 为唯一标识
         unique_progs = { (p['ch_num'], p['start']): p for p in valid_progs }.values()
 
-        print(f"🚀 正在核对本地文件并补全图片 (目标: {len(unique_progs)})...")
+        print(f"🚀 开始处理海报（含毛玻璃与硬链接去重）目标: {len(unique_progs)}...")
         
-        with ThreadPoolExecutor(max_workers=15) as executor:
+        with ThreadPoolExecutor(max_workers=10) as executor:
             executor.map(_down, unique_progs)
         
-        # 打包逻辑保持不变
+        # 打包逻辑
         if os.path.exists(poster_dir) and os.listdir(poster_dir):
             with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as z:
                 for file in os.listdir(poster_dir):
                     z.write(os.path.join(poster_dir, file), file)
-            print(f"📦 打包完成: {zip_name} (含 {len(os.listdir(poster_dir))} 张图片)")
+            print(f"📦 打包完成: {zip_name} (含 {len(os.listdir(poster_dir))} 文件)")
             
     def run(self):
         # --- 智能重试与退出逻辑开始 (仅修改此处) ---
