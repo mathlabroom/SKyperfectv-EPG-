@@ -73,24 +73,24 @@ def main():
                 img_md5 = get_file_md5(src_path)
 
                 if img_md5 in processed_md5_map:
-                    # 2. 如果这个内容处理过了，直接建立硬链接，不调用 process_image
+                    # 如果内容重复，建立硬链接节省空间
                     src_master = processed_md5_map[img_md5]
                     if not os.path.exists(dst_path):
                         try:
                             os.link(src_master, dst_path)
-                            # print(f"🔗 已跳过重复处理，硬链接至: {new_name}")
-                        except Exception as e:
-                            # 万一硬链接失败（跨分区），回退到普通处理
-                            process_image(src_path, dst_path)
+                        except Exception:
+                            import shutil
+                            shutil.copy2(src_master, dst_path)
                 else:
-                    # 3. 第一次见到这个内容，正常处理并保存
-                    if process_image(src_path, dst_path):
+                    # 第一次见到这个 MD5
+                    import shutil
+                    try:
+                        # 既然 skyperfectv_epg.py 已经处理过了，直接从 raw 复制到 final
+                        shutil.copy2(src_path, dst_path)
                         # 记录这个成品路径，供后面重复的图使用
                         processed_md5_map[img_md5] = os.path.abspath(dst_path)
-                # --- ✨ 核心去重逻辑结束 ---
-
-            except Exception as e:
-                print(f"❌ 处理 {filename} 出错: {e}")
+                    except Exception as e:
+                        print(f"  ⚠️ 复制文件失败 {filename}: {e}")
 
     print(f"✅ 处理完成。原始图片: {len(files)}, 实际生成成品: {len(processed_md5_map)}")
 
