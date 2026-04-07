@@ -11,6 +11,7 @@ import os
 import json
 import threading
 import zipfile
+import hashlib
 
 def load_channels():
     # 从 GitHub Actions 注入的环境变量中读取
@@ -324,8 +325,12 @@ class SkyPerfectUltimate:
                     
                     with md5_lock:
                         if raw_md5 in processed_md5_map:
-                            # 2. 如果内容已存在，创建硬链接（相同内容，不同名字）
-                            os.link(processed_md5_map[raw_md5], path)
+                            # 确保源文件是绝对路径，且目标文件不存在
+                            src_file = os.path.abspath(processed_md5_map[raw_md5])
+                            dst_file = os.path.abspath(path)
+                            if not os.path.exists(dst_file):
+                                try:
+                                    os.link(src_file, dst_file) # 创建硬链接
                         else:
                             # 3. 第一次见到，进行毛玻璃处理并保存
                             if _process_and_save(r.content, path):
