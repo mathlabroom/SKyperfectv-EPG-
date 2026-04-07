@@ -36,13 +36,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-epg-cache-
 
-      # 新增：获取北京时间并存入环境变量，供后续所有步骤使用
       - name: Get Beijing Time
         run: echo "BJ_TIME=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
 
       - name: Clear old posters
         run: |
-          mkdir -p posters_raw posters_final # 确保文件夹存在，防止 rm 报错
+          mkdir -p posters_raw posters_final
           rm -rf posters_raw/*
           rm -rf posters_final/*
           
@@ -56,7 +55,6 @@ jobs:
             echo "HAS_ORIGINAL=true" >> $GITHUB_OUTPUT
           else
             echo "HAS_ORIGINAL=false" >> $GITHUB_OUTPUT
-            echo "⚠️ Warning: posters.zip not found."
           fi
 
       - name: Process Posters for Fury
@@ -64,30 +62,29 @@ jobs:
         env:
           FURY_ID: ${{ vars.FURY_ID }}
         run: |
-          # 1. 准备目录并解压原始海报
+          # 1. 解压原始海报
           mkdir -p posters_raw posters_final
           unzip -q -o posters.zip -d posters_raw/
           
-          # 2. 运行 Python 脚本 (配合我之前给你的 MD5 + os.link 修改版)
+          # 2. 运行 Python 脚本（MD5 + Hard Link 版）
           python process_posters.py
           
-          # 3. 检查是否有生成成品
+          # 3. 使用 tar 保持硬链接打包
           if [ -d "posters_final" ] && [ "$(ls -A posters_final 2>/dev/null)" ]; then
-            echo "🚀 正在使用 tar 保持硬链接打包..."
-            
-            # -c: 创建, -z: gzip压缩, -v: 显示过程, -f: 指定文件名
-            # -C: 切换到目录内部打包，这样解压出来不会多一层 posters_final 文件夹
+            echo "🚀 正在打包 fury_posters.tar.gz (保留物理硬链接)..."
+            # -C 切换目录打包，确保解压后直接是图片文件
             tar -czvf fury_posters.tar.gz -C posters_final .
-            
-            echo "✅ fury_posters.tar.gz 已生成，硬链接已保留。"
+            echo "✅ fury_posters.tar.gz 已生成。"
           fi
 
-      # 4. (可选) 增加一个体积检查步骤，让你在日志里直接看到效果
       - name: Check Package Size
+        if: steps.scraper.outputs.HAS_ORIGINAL == 'true'
         run: |
-          echo "📦 原始包大小: $(du -sh posters.zip | cut -f1)"
-          echo "📦 Fury去重包大小: $(du -sh fury_posters.zip | cut -f1)"
-          
+          echo "=== 体积对比报告 ==="
+          [ -f "posters.zip" ] && echo "📦 原始 ZIP 大小: $(du -sh posters.zip | cut -f1)"
+          [ -f "fury_posters.tar.gz" ] && echo "📦 Fury (Hard Link) tar.gz 大小: $(du -sh fury_posters.tar.gz | cut -f1)"
+          echo "=================="
+
       - name: Save EPG Cache
         uses: actions/cache/save@v3
         if: always()
@@ -99,10 +96,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          # 🚩 关键新增：强制将标签指向当前的 Commit 节点
           target_commitish: ${{ github.sha }} 
           name: "Latest SPTV EPG & Posters"
-          # 🚩 关键新增：强制更新现有的标签
           force_update: true 
           files: |
             epg_ultimate.xml.gz
@@ -112,18 +107,11 @@ jobs:
           body: |
             ### 自动更新报告
             - **更新时间**: ${{ env.BJ_TIME }} (北京时间)
-            - **包含内容**: 原始海报、Fury 适配版海报及最新 EPG 压缩包。
+            - **特别说明**: `fury_posters.tar.gz` 采用了硬链接技术，推荐在支持 tar 的机顶盒上使用以节省空间。
           prerelease: false
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Skip Git Push
-        run: |
-          echo "✅ 任务执行完毕"
-          echo "📦 原始 XML 和 GZ 压缩包已准备就绪"
-          echo "🖼️ 节目海报已打包完成"
-          echo "🚀 所有产物已上传至 Release 页面，跳过仓库推送以保持 Git 干净。"
 
       - name: Upload Artifacts (Internal Debug)
         uses: actions/upload-artifact@v4
@@ -132,9 +120,9 @@ jobs:
           name: debug-files
           path: |
             posters.zip
-            fury_posters.zip
+            fury_posters.tar.gz
           retention-days: 1
-          
+
       - name: "Upload All JSON for Me"
         uses: actions/upload-artifact@v4
         with:
