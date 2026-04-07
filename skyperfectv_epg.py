@@ -324,47 +324,64 @@ class SkyPerfectUltimate:
             print(f"📦 打包完成: {zip_name} (含 {len(os.listdir(poster_dir))} 张图片)")
             
     def run(self):
+        # --- 智能重试与退出逻辑开始 (仅修改此处) ---
+        max_tries = 3
+        last_cache_count = len(self.cache)
+        
+        for i in range(max_tries):
+            print(f"\n🔄 开始第 {i+1}/{max_tries} 轮 EPG 扫描...")
+            
+            # 建立映射表
+            ref_to_id = {v[0].rstrip(':').upper(): k for k, v in CHANNELS_MAP.items()}
+            all_progs = []
+            count = 0
+            
+            # 执行抓取任务
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                tasks = [executor.submit(self.fetch_channel, k, v[0], v[1]) for k, v in CHANNELS_MAP.items()]
+                for f in as_completed(tasks):
+                    try:
+                        result = f.result()
+                        if result:
+                            with self.lock:
+                                all_progs.extend(result)
+                            count += 1
+                            if count % 5 == 0:
+                                self.save_cache()
+                    except Exception as e:
+                        print(f"⚠️ 频道抓取异常: {e}")
+
+            current_cache_count = len(self.cache)
+            new_records = current_cache_count - last_cache_count
+            
+            if i < max_tries - 1: # 如果不是最后一轮，判断是否需要继续
+                if new_records > 0:
+                    print(f"✨ 本轮新抓获 {new_records} 条节目详情，准备进行下一轮补漏...")
+                    last_cache_count = current_cache_count
+                    time.sleep(5) # 稍作停顿，避免请求过快
+                else:
+                    print("✅ 数据已全部对齐，未发现新节目，提前结束扫描。")
+                    break
+            else:
+                print("🏁 已完成 3 轮扫描，进入最终打包流程。")
+        # --- 智能重试与退出逻辑结束 ---
+
+        # 2. 构建最终 XML (以下代码完全不动)
         file_name = "epg_ultimate.xml" 
         start_time = time.time()
-        # 频道图标的基础 URL
         icon_base = "https://www.skyperfectv.co.jp/library/common/img/channel/icon/premium/m_{}.gif"
         
-        # 建立映射表：从抓取到的 service_ref 映射回 频道ID
-        ref_to_id = {v[0].rstrip(':').upper(): k for k, v in CHANNELS_MAP.items()}
-        all_progs = []
-        count = 0
-        
-        # 1. 抓取任务
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            # 这里的 k 是 ch_num, v[0] 是 srv_ref, v[1] 是 name
-            tasks = [executor.submit(self.fetch_channel, k, v[0], v[1]) for k, v in CHANNELS_MAP.items()]
-            for f in as_completed(tasks):
-                try:
-                    result = f.result()
-                    if result:
-                        with self.lock:
-                            all_progs.extend(result)
-                        count += 1
-                        if count % 5 == 0:
-                            self.save_cache()
-                            print(f"📡 已自动存档缓存，当前频道进度: {count}")
-                except Exception as e:
-                    print(f"⚠️ 频道抓取异常: {e}")
-
-        # 2. 构建最终 XML
         root = ET.Element("tv", {"generator-info-name": "SkyPerfectUltimate"})
         
-        # --- 步骤 A: 添加频道头 (含频道图标) ---
+        # --- 步骤 A: 添加频道头 ---
         for ch_num, (ref, name) in CHANNELS_MAP.items():
             chan = ET.SubElement(root, "channel", id=f"CH.{ch_num}")
             ET.SubElement(chan, "display-name").text = name
-            # 🎯 自动合成频道图标 URL (基于频道 ID)
             channel_icon_url = icon_base.format(ch_num)
             ET.SubElement(chan, "icon", src=channel_icon_url)
         
         # --- 步骤 B: 生成节目节点 ---
         for p in all_progs:
-            # 确保 ID 匹配正确
             clean_ref = p['ref'].rstrip(':').upper()
             short_id_num = ref_to_id.get(clean_ref, p.get('ch_num', 'Unknown'))
             short_id = f"CH.{short_id_num}"
@@ -372,35 +389,32 @@ class SkyPerfectUltimate:
             prog = ET.SubElement(root, "programme", channel=short_id, start=p['start'], stop=p['stop'])
             ET.SubElement(prog, "title", lang="ja").text = p['title'].strip() if p['title'] else "No Title"
 
-            # 🎯 记录节目海报图片链接
             if p.get('icon'):
                 ET.SubElement(prog, "icon", src=p['icon'])
             
-            # 🎯 写入已清洗的描述（已在 fetch_detail 中去广告）
             desc_val = p.get('desc', '')
             if desc_val:
                 ET.SubElement(prog, "desc", lang="ja").text = desc_val
     
-        # 3. 内存排序：先按频道 ID 升序，同频道按时间升序
-        # 这一步非常重要，能极大提高播放器加载速度
+        # 3. 内存排序
         channels = root.findall('channel')
         programmes = root.findall('programme')
         programmes.sort(key=lambda x: (x.get('channel', ''), x.get('start', '')))
         root[:] = channels + programmes
         print(f"✅ 内存排序完成：共计 {len(programmes)} 条节目")
 
-        # 4. 落地保存并美化
+        # 4. 落地保存
         self.save_cache()
         tree = ET.ElementTree(root)
         if hasattr(ET, 'indent'):
-            ET.indent(tree, space="  ") # 保持生成的 XML 易读
+            ET.indent(tree, space="  ")
         tree.write(file_name, encoding="utf-8", xml_declaration=True)
         
-        # 5. 生成 Gzip 压缩包 (标准 EPG 格式)
+        # 5. 生成 Gzip
         with open(file_name, 'rb') as f_in, gzip.open(f"{file_name}.gz", 'wb') as f_out:
             f_out.writelines(f_in)
         
-        # 6. 🎯 核心要求：下载 48h 内的节目图片并打包成 posters.zip
+        # 6. 下载图片
         self.download_to_zip(all_progs)
         
         print(f"\n🚀 全部任务完成！耗时: {time.time()-start_time:.1f}s | 缓存库总量: {len(self.cache)}")
