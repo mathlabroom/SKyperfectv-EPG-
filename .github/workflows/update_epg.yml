@@ -73,15 +73,15 @@ jobs:
           
           # 3. 检查是否有生成成品
           if [ -d "posters_final" ] && [ "$(ls -A posters_final 2>/dev/null)" ]; then
-            echo "🚀 正在使用 7z 固实压缩进行去重打包..."
+            echo "🚀 正在打包 Fury 适配版海报 (ZIP 格式)..."
             
-            # 使用 7z 创建 zip 格式压缩包
-            # -tzip: 指定输出为 zip 格式 (兼容机顶盒)
-            # -mx=9: 极致压缩
-            # -ms=on: 开启固实压缩 (这是去重的核心)
-            7z a -tzip -mx=9 -ms=on fury_posters.zip ./posters_final/*
+            # 移除 -ms=on，因为 ZIP 不支持固实压缩
+            # -tzip: 确保是 ZIP 格式
+            # -mx=9: 保持最高压缩率
+            # -mm=Deflate: 使用最通用的压缩算法，确保插件能解压
+            7z a -tzip -mx=9 fury_posters.zip ./posters_final/*
             
-            echo "✅ fury_posters.zip 已生成，体积已通过固实压缩优化。"
+            echo "✅ fury_posters.zip 已生成。"
           else
             echo "⚠️ 本次运行没有新海报，生成占位包"
             echo "placeholder" > posters_final/placeholder.txt
@@ -123,6 +123,7 @@ jobs:
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Skip Git Push
         run: |
           echo "✅ 任务执行完毕"
