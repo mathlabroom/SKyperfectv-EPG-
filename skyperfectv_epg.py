@@ -325,17 +325,22 @@ class SkyPerfectUltimate:
                     
                     with md5_lock:
                         if raw_md5 in processed_md5_map:
-                            # 确保源文件是绝对路径，且目标文件不存在
+                            # 2. 如果内容已存在，尝试创建硬链接
                             src_file = os.path.abspath(processed_md5_map[raw_md5])
                             dst_file = os.path.abspath(path)
                             if not os.path.exists(dst_file):
                                 try:
-                                    os.link(src_file, dst_file) # 创建硬链接
+                                    os.link(src_file, dst_file)
+                                except:
+                                    # 如果硬链接失败（比如跨文件系统），则重新处理保存一份
+                                    _process_and_save(r.content, path)
                         else:
                             # 3. 第一次见到，进行毛玻璃处理并保存
                             if _process_and_save(r.content, path):
                                 processed_md5_map[raw_md5] = path
-            except: pass 
+            except Exception as e:
+                # 外层 try 的闭合
+                pass
 
         valid_progs = [p for p in all_progs if p and p.get('icon') and p.get('ch_num') and p.get('start')]
         unique_progs = { (p['ch_num'], p['start']): p for p in valid_progs }.values()
