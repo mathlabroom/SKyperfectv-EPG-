@@ -64,19 +64,36 @@ jobs:
         env:
           FURY_ID: ${{ vars.FURY_ID }}
         run: |
+          # 1. 准备目录并解压原始海报
           mkdir -p posters_raw posters_final
           unzip -q -o posters.zip -d posters_raw/
+          
+          # 2. 运行 Python 脚本 (配合我之前给你的 MD5 + os.link 修改版)
           python process_posters.py
+          
+          # 3. 检查是否有生成成品
           if [ -d "posters_final" ] && [ "$(ls -A posters_final 2>/dev/null)" ]; then
-            cd posters_final && zip -rq ../fury_posters.zip ./* && cd ..
-            echo "✅ fury_posters.zip created."
+            echo "🚀 正在使用 7z 固实压缩进行去重打包..."
+            
+            # 使用 7z 创建 zip 格式压缩包
+            # -tzip: 指定输出为 zip 格式 (兼容机顶盒)
+            # -mx=9: 极致压缩
+            # -ms=on: 开启固实压缩 (这是去重的核心)
+            7z a -tzip -mx=9 -ms=on fury_posters.zip ./posters_final/*
+            
+            echo "✅ fury_posters.zip 已生成，体积已通过固实压缩优化。"
           else
-            # 如果没新图，创建一个空文件占位，防止后面上传步骤报错
             echo "⚠️ 本次运行没有新海报，生成占位包"
-            touch posters_final/placeholder.txt
-            zip -rq fury_posters.zip posters_final/placeholder.txt
+            echo "placeholder" > posters_final/placeholder.txt
+            7z a -tzip fury_posters.zip ./posters_final/placeholder.txt
           fi
 
+      # 4. (可选) 增加一个体积检查步骤，让你在日志里直接看到效果
+      - name: Check Package Size
+        run: |
+          echo "📦 原始包大小: $(du -sh posters.zip | cut -f1)"
+          echo "📦 Fury去重包大小: $(du -sh fury_posters.zip | cut -f1)"
+          
       - name: Save EPG Cache
         uses: actions/cache/save@v3
         if: always()
