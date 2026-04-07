@@ -4,6 +4,7 @@ import time
 import ast
 from datetime import datetime
 from PIL import Image, ImageFilter
+import hashlib # 必须在文件顶部加上这个导入
 
 # --- 获取 GitHub Actions 变量 ---
 def get_fury_mapping():
@@ -25,48 +26,73 @@ def get_fury_mapping():
 
 FURY_MAP = get_fury_mapping()
 
-def main():
-    # skyperfectv_epg.py 生成的带毛玻璃的目录
-    raw_dir = "posters" 
-    # Fury 最终使用的目录
-    final_dir = "posters_final" 
-    os.makedirs(final_dir, exist_ok=True)
+def get_file_md5(file_path):
+    """计算文件的 MD5 值"""
+    hash_md = hashlib.md5()
+    with open(file_path, 'rb') as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md.update(chunk)
+    return hash_md.hexdigest()
 
+def main():
+    raw_dir, final_dir = "posters_raw", "posters_final"
+    os.makedirs(final_dir, exist_ok=True)
+    
     if not os.path.exists(raw_dir):
-        print(f"❌ 找不到原始海报目录: {raw_dir}")
+        print(f"❌ 错误: 找不到目录 {raw_dir}")
         return
 
     files = os.listdir(raw_dir)
-    print(f"🔗 开始为 Fury 皮肤创建硬链接，共 {len(files)} 个文件...")
+    print(f"DEBUG: Found {len(files)} files in {raw_dir}")
+
+    # --- ✨ 新增：用于去重的内存映射表 ---
+    # 格式: { "图片的MD5": "第一个处理出来的成品绝对路径" }
+    processed_md5_map = {}
 
     for filename in files:
-        # 匹配 skyperfectv_epg.py 生成的格式: CH.518_202604050000.jpg
         match = re.search(r'(CH\.\d+)_(\d{12})', filename)
         
         if match:
             ch_tag, time_str = match.groups()
-            f_hash = FURY_MAP.get(ch_tag) # 从环境变量获取 FURY ID
+            f_hash = FURY_MAP.get(ch_tag)
             
             if not f_hash:
                 continue
 
             try:
-                # 转换时间为 Unix 时间戳
+                # 转换时间戳
                 dt = datetime.strptime(time_str, "%Y%m%d%H%M")
-                # 减去 32400 (9小时) 是为了对齐日本时区偏移，保持你原有的逻辑
                 ts = int(time.mktime(dt.timetuple())) - 32400
                 
                 new_name = f"{f_hash}_{ts}.jpg"
                 src_path = os.path.join(raw_dir, filename)
                 dst_path = os.path.join(final_dir, new_name)
 
-                # --- 核心改进：不再处理图片，只建立硬链接 ---
-                if not os.path.exists(dst_path):
-                    os.link(src_path, dst_path) # 瞬间完成
-            except Exception as e:
-                print(f"❌ 链接失败 {filename}: {e}")
+                # --- ✨ 核心去重逻辑开始 ---
+                # 1. 计算原始图片的 MD5（用来判断内容是否重复）
+                img_md5 = get_file_md5(src_path)
 
-    print(f"✅ Fury 适配包制作完成，已存放至 {final_dir}")
+                if img_md5 in processed_md5_map:
+                    # 2. 如果这个内容处理过了，直接建立硬链接，不调用 process_image
+                    src_master = processed_md5_map[img_md5]
+                    if not os.path.exists(dst_path):
+                        try:
+                            os.link(src_master, dst_path)
+                            # print(f"🔗 已跳过重复处理，硬链接至: {new_name}")
+                        except Exception as e:
+                            # 万一硬链接失败（跨分区），回退到普通处理
+                            process_image(src_path, dst_path)
+                else:
+                    # 3. 第一次见到这个内容，正常处理并保存
+                    if process_image(src_path, dst_path):
+                        # 记录这个成品路径，供后面重复的图使用
+                        processed_md5_map[img_md5] = os.path.abspath(dst_path)
+                # --- ✨ 核心去重逻辑结束 ---
+
+            except Exception as e:
+                print(f"❌ 处理 {filename} 出错: {e}")
+
+    print(f"✅ 处理完成。原始图片: {len(files)}, 实际生成成品: {len(processed_md5_map)}")
 
 if __name__ == "__main__":
     main()
