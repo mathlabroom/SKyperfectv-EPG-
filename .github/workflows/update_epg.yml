@@ -73,19 +73,13 @@ jobs:
           
           # 3. 检查是否有生成成品
           if [ -d "posters_final" ] && [ "$(ls -A posters_final 2>/dev/null)" ]; then
-            echo "🚀 正在打包 Fury 适配版海报 (ZIP 格式)..."
+            echo "🚀 正在使用 tar 保持硬链接打包..."
             
-            # 移除 -ms=on，因为 ZIP 不支持固实压缩
-            # -tzip: 确保是 ZIP 格式
-            # -mx=9: 保持最高压缩率
-            # -mm=Deflate: 使用最通用的压缩算法，确保插件能解压
-            7z a -tzip -mx=9 fury_posters.zip ./posters_final/*
+            # -c: 创建, -z: gzip压缩, -v: 显示过程, -f: 指定文件名
+            # -C: 切换到目录内部打包，这样解压出来不会多一层 posters_final 文件夹
+            tar -czvf fury_posters.tar.gz -C posters_final .
             
-            echo "✅ fury_posters.zip 已生成。"
-          else
-            echo "⚠️ 本次运行没有新海报，生成占位包"
-            echo "placeholder" > posters_final/placeholder.txt
-            7z a -tzip fury_posters.zip ./posters_final/placeholder.txt
+            echo "✅ fury_posters.tar.gz 已生成，硬链接已保留。"
           fi
 
       # 4. (可选) 增加一个体积检查步骤，让你在日志里直接看到效果
@@ -114,7 +108,7 @@ jobs:
             epg_ultimate.xml.gz
             epg_ultimate.xml
             posters.zip
-            fury_posters.zip
+            fury_posters.tar.gz
           body: |
             ### 自动更新报告
             - **更新时间**: ${{ env.BJ_TIME }} (北京时间)
