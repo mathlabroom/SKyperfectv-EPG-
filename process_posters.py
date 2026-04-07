@@ -2,21 +2,20 @@ import os
 import re
 import time
 import ast
+import hashlib
+import shutil
 from datetime import datetime
 from PIL import Image, ImageFilter
-import hashlib # 必须在文件顶部加上这个导入
 
 # --- 获取 GitHub Actions 变量 ---
 def get_fury_mapping():
     raw_var = os.getenv('FURY_ID', '{}').strip()
-    print(f"DEBUG: Raw FURY_ID from env: '{raw_var}'") # 确认环境变量是否真的传进来了
+    print(f"DEBUG: Raw FURY_ID from env: '{raw_var}'")
     
     try:
-        # 强制清理：去掉可能的 FURY_ID = 前缀
         if '=' in raw_var:
             raw_var = raw_var.split('=', 1)[1].strip()
         
-        # 尝试解析
         mapping = ast.literal_eval(raw_var)
         print(f"DEBUG: Parsed mapping keys: {list(mapping.keys())}")
         return mapping
@@ -45,11 +44,11 @@ def main():
     files = os.listdir(raw_dir)
     print(f"DEBUG: Found {len(files)} files in {raw_dir}")
 
-    # --- ✨ 新增：用于去重的内存映射表 ---
-    # 格式: { "图片的MD5": "第一个处理出来的成品绝对路径" }
+    # 用于去重的内存映射表 { "图片的MD5": "第一个成品的绝对路径" }
     processed_md5_map = {}
 
     for filename in files:
+        # 匹配 CH.xxx_时间戳 格式
         match = re.search(r'(CH\.\d+)_(\d{12})', filename)
         
         if match:
@@ -60,7 +59,7 @@ def main():
                 continue
 
             try:
-                # 转换时间戳
+                # 转换时间戳 (JST to UTC/Unix)
                 dt = datetime.strptime(time_str, "%Y%m%d%H%M")
                 ts = int(time.mktime(dt.timetuple())) - 32400
                 
@@ -68,8 +67,7 @@ def main():
                 src_path = os.path.join(raw_dir, filename)
                 dst_path = os.path.join(final_dir, new_name)
 
-                # --- ✨ 核心去重逻辑开始 ---
-                # 1. 计算原始图片的 MD5（用来判断内容是否重复）
+                # --- 核心去重逻辑 ---
                 img_md5 = get_file_md5(src_path)
 
                 if img_md5 in processed_md5_map:
@@ -79,20 +77,21 @@ def main():
                         try:
                             os.link(src_master, dst_path)
                         except Exception:
-                            import shutil
                             shutil.copy2(src_master, dst_path)
                 else:
-                    # 第一次见到这个 MD5
-                    import shutil
+                    # 第一次见到这个内容
                     try:
-                        # 既然 skyperfectv_epg.py 已经处理过了，直接从 raw 复制到 final
+                        # 因为 skyperfectv_epg.py 已经处理过毛玻璃了，这里直接复制
                         shutil.copy2(src_path, dst_path)
-                        # 记录这个成品路径，供后面重复的图使用
+                        # 记录这个成品路径，供后续重复的图使用
                         processed_md5_map[img_md5] = os.path.abspath(dst_path)
                     except Exception as e:
                         print(f"  ⚠️ 复制文件失败 {filename}: {e}")
 
-    print(f"✅ 处理完成。原始图片: {len(files)}, 实际生成成品: {len(processed_md5_map)}")
+            except Exception as e:
+                print(f"❌ 处理文件逻辑出错 {filename}: {e}")
+
+    print(f"✅ 处理完成。原始图片: {len(files)}, 实际去重后成品: {len(processed_md5_map)}")
 
 if __name__ == "__main__":
     main()
