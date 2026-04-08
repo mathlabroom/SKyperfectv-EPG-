@@ -10,7 +10,6 @@
  https://github.com/mathlabroom/SKyperfectv-EPG-/releases/download/latest/epg_ultimate.xml.gz
 2. Posters  海报  
  https://github.com/mathlabroom/SKyperfectv-EPG-/releases/download/latest/fury_posters.zip
-
  https://github.com/mathlabroom/SKyperfectv-EPG-/releases/download/latest/fury_posters.tar.gz
 
 ## 效果图
