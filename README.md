@@ -11,7 +11,7 @@
 2. Posters  海报  
  https://github.com/mathlabroom/SKyperfectv-EPG-/releases/download/latest/fury_posters.zip
 
-https://github.com/mathlabroom/SKyperfectv-EPG-/releases/download/latest/fury_posters.tar.gz
+ https://github.com/mathlabroom/SKyperfectv-EPG-/releases/download/latest/fury_posters.tar.gz
 
 ## 效果图
 <img width="960" height="540" alt="image" src="https://github.com/user-attachments/assets/12185c41-aa54-41b0-a3f9-8063a1dbc868" />
