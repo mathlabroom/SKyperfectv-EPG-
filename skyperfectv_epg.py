@@ -67,36 +67,47 @@ class SkyPerfectUltimate:
     def save_cache(self):
         """核心优化：实现你的计划 —— 保留命中项 + 捞回未过期项"""
         with self.lock:
-            # 1. 获取当前东京时间 (JST)，缓存时间戳为 +0900
+            # 1. 时间基准（东京时间）
             jst_now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
-            # 给 2 小时缓冲，防止正在播出的节目被切掉
             now_str = (jst_now - datetime.timedelta(hours=2)).strftime("%Y%m%d%H%M%S")
             
+            # --- ✨ 修正统计逻辑 ---
+            old_keys = set(self.cache.keys())
+            hit_keys = set(self.new_cache.keys()) # 本次扫描命中的（含新抓取的）
+            
             compensate_count = 0
-            # 2. ✨ 补偿逻辑：从旧缓存中捞回那些“没命中但还没播完”的节目
+            # 2. 补偿逻辑
             for url, info in self.cache.items():
-                if url not in self.new_cache:
-                    # 提取 stop 时间戳的前 14 位进行对比
+                if url not in hit_keys:
                     stop_val = info.get('stop', '00000000000000').split(' ')[0]
                     if stop_val > now_str:
                         self.new_cache[url] = info
                         compensate_count += 1
-
-            # 3. 统计并更新内存中的主缓存
-            old_total = len(self.cache)
+            
+            # 最终留下的集合
+            final_keys = set(self.new_cache.keys())
+            
+            # 真正的新增 (在 new_cache 但不在 old_cache)
+            real_new = len(final_keys - old_keys)
+            # 真正的命中 (在 new_cache 且在 old_cache，且不是补偿回来的)
+            real_hit = len(hit_keys & old_keys)
+            # 真正被踢掉的 (在 old_cache 但不在 final_keys)
+            dropped_count = len(old_keys - final_keys)
+            
+            # 3. 更新内存主缓存
             self.cache = self.new_cache.copy() 
             
             print("-" * 30)
             print(f"📊 缓存重构报告:")
-            print(f"   - 本次命中/新增: {len(self.cache) - compensate_count} 条")
-            print(f"   - 自动保留未过期: {compensate_count} 条")
-            print(f"   - 彻底清理过期项: {old_total + (len(self.cache)-compensate_count) - len(self.cache)} 条")
+            print(f"   - 本次扫描命中: {real_hit} 条")
+            print(f"   - 真正新增抓取: {real_new} 条")
+            print(f"   - 自动补偿保留: {compensate_count} 条")
+            print(f"   - 彻底清理过期: {dropped_count} 条") # 👈 这次会显示几十到几百条
             print(f"   - 最终缓存总量: {len(self.cache)} 条")
             print("-" * 30)
 
             try:
                 with open(self.cache_file, 'w', encoding='utf-8') as f:
-                    # 使用 indent=2 保持可读性，如果追求极致体积可以去掉
                     json.dump(self.cache, f, ensure_ascii=False, indent=2)
             except Exception as e:
                 print(f"❌ 写入缓存文件失败: {e}")
