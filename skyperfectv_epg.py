@@ -40,10 +40,8 @@ class SkyPerfectUltimate:
         self.cache_file = "epg_cache.json"
         self.lock = threading.Lock()
         
-        # --- ✨ 缓存逻辑重构 ---
-        self.cache = self.load_cache()  # 加载历史数据作为 old_cache
-        self.new_cache = {}            # ✨ 核心：仅存放本次命中或新抓取的数据
-        # --------------------
+        self.cache = self.load_cache()  # 加载历史数据
+        self.new_cache = {}            # 核心：仅存放本次命中或新抓取的数据
 
     def ultimate_clean(self, text):
         if not text: return ""
@@ -64,51 +62,49 @@ class SkyPerfectUltimate:
             except: return {}
         return {}
 
-    def save_cache(self):
-        """核心优化：实现你的计划 —— 保留命中项 + 捞回未过期项"""
+    def save_cache(self, final=False):
+        """增强版保存逻辑：支持中间进度显示和最终大扫除"""
         with self.lock:
-            # 1. 时间基准（东京时间）
-            jst_now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
-            now_str = (jst_now - datetime.timedelta(hours=2)).strftime("%Y%m%d%H%M%S")
-            
-            # --- ✨ 修正统计逻辑 ---
-            old_keys = set(self.cache.keys())
-            hit_keys = set(self.new_cache.keys()) # 本次扫描命中的（含新抓取的）
-            
-            compensate_count = 0
-            # 2. 补偿逻辑
-            for url, info in self.cache.items():
-                if url not in hit_keys:
-                    stop_val = info.get('stop', '00000000000000').split(' ')[0]
-                    if stop_val > now_str:
-                        self.new_cache[url] = info
-                        compensate_count += 1
-            
-            # 最终留下的集合
-            final_keys = set(self.new_cache.keys())
-            
-            # 真正的新增 (在 new_cache 但不在 old_cache)
-            real_new = len(final_keys - old_keys)
-            # 真正的命中 (在 new_cache 且在 old_cache，且不是补偿回来的)
-            real_hit = len(hit_keys & old_keys)
-            # 真正被踢掉的 (在 old_cache 但不在 final_keys)
-            dropped_count = len(old_keys - final_keys)
-            
-            # 3. 更新内存主缓存
-            self.cache = self.new_cache.copy() 
-            
-            print("-" * 30)
-            print(f"📊 缓存重构报告:")
-            print(f"   - 本次扫描命中: {real_hit} 条")
-            print(f"   - 真正新增抓取: {real_new} 条")
-            print(f"   - 自动补偿保留: {compensate_count} 条")
-            print(f"   - 彻底清理过期: {dropped_count} 条") # 👈 这次会显示几十到几百条
-            print(f"   - 最终缓存总量: {len(self.cache)} 条")
-            print("-" * 30)
+            if not final:
+                # --- 中间进度统计 ---
+                current_keys = set(self.new_cache.keys())
+                old_keys = set(self.cache.keys())
+                real_hit = len(current_keys & old_keys)
+                real_new = len(current_keys - old_keys)
+                print(f"📊 [实时进度] 当前已扫描命中: {real_hit} | 本次新抓: {real_new}")
+            else:
+                # --- 最终大扫除逻辑 ---
+                jst_now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+                now_str = (jst_now - datetime.timedelta(hours=2)).strftime("%Y%m%d%H%M%S")
+                
+                old_keys = set(self.cache.keys())
+                hit_keys = set(self.new_cache.keys())
+                
+                compensate_count = 0
+                for url, info in self.cache.items():
+                    if url not in hit_keys:
+                        stop_val = info.get('stop', '00000000000000').split(' ')[0]
+                        if stop_val > now_str:
+                            self.new_cache[url] = info
+                            compensate_count += 1
+                
+                final_keys = set(self.new_cache.keys())
+                dropped_count = len(old_keys - final_keys)
+                
+                # 正式替换内存中的缓存
+                self.cache = self.new_cache.copy()
+                
+                print("-" * 30)
+                print(f"📊 最终缓存重构报告:")
+                print(f"   - 总计扫描覆盖: {len(hit_keys)} 条")
+                print(f"   - 自动补偿保留: {compensate_count} 条")
+                print(f"   - 彻底清理过期: {dropped_count} 条")
+                print(f"   - 最终缓存总量: {len(self.cache)} 条")
+                print("-" * 30)
 
             try:
                 with open(self.cache_file, 'w', encoding='utf-8') as f:
-                    json.dump(self.cache, f, ensure_ascii=False, indent=2)
+                    json.dump(self.new_cache, f, ensure_ascii=False, indent=2)
             except Exception as e:
                 print(f"❌ 写入缓存文件失败: {e}")
 
@@ -361,14 +357,18 @@ class SkyPerfectUltimate:
             print(f"📦 打包完成: {zip_name} (含 {len(os.listdir(poster_dir))} 文件)")
             
     def run(self):
-        # ... (保持原有的智能重试逻辑不动，它会自动调用新的 save_cache) ...
         max_tries = 3
-        last_cache_count = len(self.cache)
+        # ✨ 关键：在循环外初始化，用于跨轮次对比
+        last_scan_count = 0 
+        all_progs = []
+        
         for i in range(max_tries):
             print(f"\n🔄 开始第 {i+1}/{max_tries} 轮 EPG 扫描...")
             ref_to_id = {v[0].rstrip(':').upper(): k for k, v in CHANNELS_MAP.items()}
-            all_progs = []
+            # 每一轮清空 all_progs，因为 fetch_channel 会重新跑全量或补漏
+            all_progs = [] 
             count = 0
+            
             with ThreadPoolExecutor(max_workers=5) as executor:
                 tasks = [executor.submit(self.fetch_channel, k, v[0], v[1]) for k, v in CHANNELS_MAP.items()]
                 for f in as_completed(tasks):
@@ -377,29 +377,38 @@ class SkyPerfectUltimate:
                         if result:
                             with self.lock: all_progs.extend(result)
                             count += 1
-                            if count % 5 == 0: self.save_cache()
-                    except Exception as e: print(f"⚠️ 频道抓取异常: {e}")
+                            if count % 5 == 0: self.save_cache(final=False)
+                    except Exception as e: 
+                        print(f"⚠️ 频道抓取异常: {e}")
 
-            current_cache_count = len(self.cache)
-            new_records = current_cache_count - last_cache_count
+            current_scan_count = len(self.new_cache)
+            new_records_this_round = current_scan_count - last_scan_count
+            
+            # 记录本次扫描到的总量，供下一轮对比
+            last_scan_count = current_scan_count
+
             if i < max_tries - 1:
-                if new_records > 0:
-                    print(f"✨ 本轮新抓获 {new_records} 条节目详情，准备补漏...")
-                    last_cache_count = current_cache_count
+                if new_records_this_round > 0:
+                    print(f"✨ 本轮有效扫描/新增 {new_records_this_round} 条，准备下一轮补漏...")
                     time.sleep(5)
                 else:
-                    print("✅ 数据对齐，提前结束。")
+                    print("✅ 扫描数据已对齐，无需更多重试。")
                     break
+                    
+        self.save_cache(final=True)
         
         # 构建 XML 与保存
         file_name = "epg_ultimate.xml" 
         start_time = time.time()
         root = ET.Element("tv", {"generator-info-name": "SkyPerfectUltimate"})
+
+        # 先添加频道定义
         for ch_num, (ref, name) in CHANNELS_MAP.items():
             chan = ET.SubElement(root, "channel", id=f"CH.{ch_num}")
             ET.SubElement(chan, "display-name").text = name
             ET.SubElement(chan, "icon", src=f"https://www.skyperfectv.co.jp/library/common/img/channel/icon/premium/m_{ch_num}.gif")
         
+        # 添加节目详情
         for p in all_progs:
             clean_ref = p['ref'].rstrip(':').upper()
             short_id_num = ref_to_id.get(clean_ref, p.get('ch_num', 'Unknown'))
@@ -408,18 +417,24 @@ class SkyPerfectUltimate:
             if p.get('icon'): ET.SubElement(prog, "icon", src=p['icon'])
             if p.get('desc'): ET.SubElement(prog, "desc", lang="ja").text = p.get('desc')
 
+        # 排序
         programmes = root.findall('programme')
         programmes.sort(key=lambda x: (x.get('channel', ''), x.get('start', '')))
         root[len(CHANNELS_MAP):] = programmes
-        
+
+        # 写入文件
         self.save_cache()
         tree = ET.ElementTree(root)
         if hasattr(ET, 'indent'): ET.indent(tree, space="  ")
         tree.write(file_name, encoding="utf-8", xml_declaration=True)
+        
+        # Gzip 压缩
         with open(file_name, 'rb') as f_in, gzip.open(f"{file_name}.gz", 'wb') as f_out:
             f_out.writelines(f_in)
+
+        # 处理海报并生成 Zip
         self.download_to_zip(all_progs)
-        print(f"\n🚀 任务完成！耗时: {time.time()-start_time:.1f}s | 缓存总量: {len(self.cache)}")
+        print(f"\n🚀 任务完成！耗时: {time.time()-start_time:.1f}s | 最终库: {len(self.cache)}")
 
 if __name__ == "__main__":
     SkyPerfectUltimate().run()
