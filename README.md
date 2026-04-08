@@ -13,6 +13,6 @@
 
 https://github.com/mathlabroom/SKyperfectv-EPG-/releases/download/latest/fury_posters.tar.gz
 
-
+## 效果图
 <img width="960" height="540" alt="image" src="https://github.com/user-attachments/assets/12185c41-aa54-41b0-a3f9-8063a1dbc868" />
 <img width="960" height="540" alt="image" src="https://github.com/user-attachments/assets/64714ff7-5122-40c9-b1cc-acf7051d29a4" />
