@@ -44,21 +44,21 @@ class SkyPerfectUltimate:
         self.new_cache = {}            # 核心：仅存放本次命中或新抓取的数据
 
     def ultimate_clean(self, text):
-    if not text: return ""
+        if not text: return ""
     
     # 1. 预处理：全角空格换成半角空格（保持 E2 皮肤显示的间距一致性）
-    text = text.replace('　', ' ')
+        text = text.replace('　', ' ')
     
     # 2. 删除空行：保留有文字的行，删除纯空白行
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    text = "\n".join(lines)
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        text = "\n".join(lines)
     
     # 3. 过滤掉 E2 不喜欢的控制字符，但保留换行符 \n
     # 这样在 E2 的节目单详情里，描述依然是有分段的，不会糊成一团
-    clean = "".join(c for c in text if c.isprintable() or c == "\n")
+        clean = "".join(c for c in text if c.isprintable() or c == "\n")
     
     # 4. 长度限制：E2 标题一般建议 100 字符以内，描述可以长点
-    return clean[:255].strip() if clean else "NoTitle"
+        return clean[:255].strip() if clean else "NoTitle"
 
     def load_cache(self):
         if os.path.exists(self.cache_file):
