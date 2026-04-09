@@ -92,13 +92,21 @@ jobs:
           path: epg_cache.json
           key: ${{ runner.os }}-epg-cache-${{ github.run_id }}
 
+# 第一步：物理删除旧的 Release 和 Tag (确保源码包重置)
+      - name: Delete old release and tag
+        run: |
+          gh release delete latest --yes || true
+          git push origin :refs/tags/latest || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 第二步：发布全新的 Release
       - name: Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
           target_commitish: ${{ github.sha }} 
           name: "Latest SPTV EPG & Posters"
-          force_update: true 
           files: |
             epg_ultimate.xml.gz
             epg_ultimate.xml
