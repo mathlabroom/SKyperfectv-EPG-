@@ -366,14 +366,12 @@ class SkyPerfectUltimate:
             
     def run(self):
         max_tries = 3
-        # ✨ 关键：在循环外初始化，用于跨轮次对比
         last_scan_count = 0 
         all_progs = []
         
         for i in range(max_tries):
             print(f"\n🔄 开始第 {i+1}/{max_tries} 轮 EPG 扫描...")
             ref_to_id = {v[0].rstrip(':').upper(): k for k, v in CHANNELS_MAP.items()}
-            # 每一轮清空 all_progs，因为 fetch_channel 会重新跑全量或补漏
             all_progs = [] 
             count = 0
             
@@ -391,8 +389,6 @@ class SkyPerfectUltimate:
 
             current_scan_count = len(self.new_cache)
             new_records_this_round = current_scan_count - last_scan_count
-            
-            # 记录本次扫描到的总量，供下一轮对比
             last_scan_count = current_scan_count
 
             if i < max_tries - 1:
@@ -405,19 +401,43 @@ class SkyPerfectUltimate:
                     
         self.save_cache(final=True)
         
-        # 构建 XML 与保存
+        # --- 构建 XML 逻辑开始 ---
         file_name = "epg_ultimate.xml" 
         start_time = time.time()
         root = ET.Element("tv", {"generator-info-name": "SkyPerfectUltimate"})
 
-        # 先添加频道定义
+        # 1. 先添加频道定义
         for ch_num, (ref, name) in CHANNELS_MAP.items():
             chan = ET.SubElement(root, "channel", id=f"CH.{ch_num}")
             ET.SubElement(chan, "display-name").text = name
             ET.SubElement(chan, "icon", src=f"https://www.skyperfectv.co.jp/library/common/img/channel/icon/premium/m_{ch_num}.gif")
         
-        # 添加节目详情
+        # 2. 【核心修改】按频道对所有节目进行分组并“修剪”
+        # 先根据 ref 把 all_progs 分组
+        grouped_progs = {}
         for p in all_progs:
+            clean_ref = p['ref'].rstrip(':').upper()
+            if clean_ref not in grouped_progs:
+                grouped_progs[clean_ref] = []
+            grouped_progs[clean_ref].append(p)
+
+        # 对每个频道内部执行修剪
+        final_clean_progs = []
+        for ref, progs in grouped_progs.items():
+            # 排序
+            progs.sort(key=lambda x: x['start'])
+            
+            # 修剪逻辑：以后面为准，修剪前一个的结束时间
+            for i in range(len(progs) - 1):
+                if progs[i]['stop'] > progs[i+1]['start']:
+                    progs[i]['stop'] = progs[i+1]['start']
+            
+            # 过滤掉修剪后长度为 0 的节目（被完全覆盖的）
+            valid_progs = [p for p in progs if p['start'] < p['stop']]
+            final_clean_progs.extend(valid_progs)
+
+        # 3. 将修剪后的节目写入 XML
+        for p in final_clean_progs:
             clean_ref = p['ref'].rstrip(':').upper()
             short_id_num = ref_to_id.get(clean_ref, p.get('ch_num', 'Unknown'))
             prog = ET.SubElement(root, "programme", channel=f"CH.{short_id_num}", start=p['start'], stop=p['stop'])
@@ -425,13 +445,7 @@ class SkyPerfectUltimate:
             if p.get('icon'): ET.SubElement(prog, "icon", src=p['icon'])
             if p.get('desc'): ET.SubElement(prog, "desc", lang="ja").text = p.get('desc')
 
-        # 排序
-        programmes = root.findall('programme')
-        programmes.sort(key=lambda x: (x.get('channel', ''), x.get('start', '')))
-        root[len(CHANNELS_MAP):] = programmes
-
         # 写入文件
-        self.save_cache()
         tree = ET.ElementTree(root)
         if hasattr(ET, 'indent'): ET.indent(tree, space="  ")
         tree.write(file_name, encoding="utf-8", xml_declaration=True)
@@ -440,8 +454,8 @@ class SkyPerfectUltimate:
         with open(file_name, 'rb') as f_in, gzip.open(f"{file_name}.gz", 'wb') as f_out:
             f_out.writelines(f_in)
 
-        # 处理海报并生成 Zip
-        self.download_to_zip(all_progs)
+        # 处理海报并生成 Zip (使用处理后的节目单，减少无效下载)
+        self.download_to_zip(final_clean_progs)
         print(f"\n🚀 任务完成！耗时: {time.time()-start_time:.1f}s | 最终库: {len(self.cache)}")
 
 if __name__ == "__main__":
