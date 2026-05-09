@@ -19,6 +19,8 @@
 <img width="960" height="540" alt="image" src="https://github.com/user-attachments/assets/64714ff7-5122-40c9-b1cc-acf7051d29a4" />
 
 ## 映射关系
+|   tvg-id   |         Channel Name          |
+|------------|-------------------------------|
 | Ch.623 | ＷＯＷＯＷシネマ |
 | Ch.625 | BS10プレミアム |
 | Ch.628 | 衛星劇場 |
