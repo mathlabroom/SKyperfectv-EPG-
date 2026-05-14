@@ -1,9 +1,7 @@
 name: Auto Update EPG & Standardize Posters
 
-on:
-  schedule:
-    # 含义：每隔 2 小时的第 30 分钟执行
-    - cron: '18 */3 * * *'
+schedule:
+  - cron: '0 21 * * *' # 北京时间凌晨 5:00
   workflow_dispatch:      # 允许手动触发测试
 
 jobs:
