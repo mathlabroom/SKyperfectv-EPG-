@@ -2,7 +2,7 @@ name: Auto Update EPG & Standardize Posters
 
 schedule:
   - cron: '0 21 * * *' # 北京时间凌晨 5:00
-  workflow_dispatch:      # 允许手动触发测试
+  workflow_dispatch:      # 允许手动触发
 
 jobs:
   build:
