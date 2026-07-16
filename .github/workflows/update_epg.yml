@@ -92,15 +92,7 @@ jobs:
           path: epg_cache.json
           key: ${{ runner.os }}-epg-cache-${{ github.run_id }}
 
-# 第一步：物理删除旧的 Release 和 Tag (确保源码包重置)
-      - name: Delete old release and tag
-        run: |
-          gh release delete latest --yes || true
-          git push origin :refs/tags/latest || true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # 第二步：发布全新的 Release
+      # 一步到位：直接更新或覆盖最新的 Release 与附件
       - name: Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -118,6 +110,7 @@ jobs:
             - **特别说明**: `fury_posters.tar.gz` 采用了硬链接技术，推荐在支持 tar 的机顶盒上使用以节省空间。
           prerelease: false
           make_latest: true
+          overwrite: true  # 如果存在同名附件，自动进行覆盖更新
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
