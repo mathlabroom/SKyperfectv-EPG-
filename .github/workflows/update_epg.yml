@@ -120,14 +120,14 @@ jobs:
           python3 -c "
           import re, os
           bj_time = os.environ.get('BJ_TIME', '')
-          report = f'> 🕒 **最后自动更新时间**：\`{bj_time} (北京时间)\`\\n> 📦 **全量文件发布**：\`epg_ultimate.xml.gz\` / \`fury_posters.tar.gz\`\\n> 💡 *提示：点击上方 Release 按钮可快速下载最新文件。*'
+          report = f'> 🕒 **最后自动更新时间**：\`{bj_time} (北京时间)\`\n> 📦 **全量文件发布**：\`epg_ultimate.xml.gz\` / \`fury_posters.tar.gz\`\n> 💡 *提示：点击上方 Release 按钮可快速下载最新文件。*'
           
           with open('README.md', 'r', encoding='utf-8') as f:
               content = f.read()
           
-          pattern = r'(<!-- RELEASE_LOG_START -->).*?(<!-- RELEASE_LOG_END -->)'
-          replacement = f'\\\\1\\n{report}\\n\\\\2'
-          new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+          # 直接匹配并替换整个注释区块，不使用正则分组（彻底避免 \1 \2 引起的组冲突）
+          new_block = f'<!-- RELEASE_LOG_START -->\n{report}\n<!-- RELEASE_LOG_END -->'
+          new_content = re.sub(r'<!-- RELEASE_LOG_START -->.*?<!-- RELEASE_LOG_END -->', new_block, content, flags=re.DOTALL)
           
           with open('README.md', 'w', encoding='utf-8') as f:
               f.write(new_content)
@@ -138,7 +138,7 @@ jobs:
           git add README.md
           git commit -m "docs: auto update release status in README [skip ci]" || echo "No changes to commit"
           git push
-
+          
       - name: Upload Artifacts (Internal Debug)
         uses: actions/upload-artifact@v4
         if: always()
