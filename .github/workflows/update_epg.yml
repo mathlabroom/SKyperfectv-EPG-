@@ -37,7 +37,7 @@ jobs:
             ${{ runner.os }}-epg-cache-
 
       - name: Get Beijing Time
-        run: echo "BJ_TIME=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
+        run: echo "BJ_TIME=$(TZ='Asia/Shanghai' date +'\%Y-\%m-\%d \%H:\%M:\%S')" >> $GITHUB_ENV
 
       - name: Clear old posters
         run: |
@@ -92,7 +92,7 @@ jobs:
           path: epg_cache.json
           key: ${{ runner.os }}-epg-cache-${{ github.run_id }}
 
-      # 一步到位：直接更新或覆盖最新的 Release 与附件
+      # 发布/更新 Release 附件
       - name: Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -110,9 +110,34 @@ jobs:
             - **特别说明**: `fury_posters.tar.gz` 采用了硬链接技术，推荐在支持 tar 的机顶盒上使用以节省空间。
           prerelease: false
           make_latest: true
-          overwrite: true  # 如果存在同名附件，自动进行覆盖更新
+          overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 关键新增步骤：自动更新 README 并 Git Commit（彻底重置 60 天闲置限制）
+      - name: Auto Update README & Keepalive (Reset 60-day Limit)
+        run: |
+          python3 -c "
+          import re, os
+          bj_time = os.environ.get('BJ_TIME', '')
+          report = f'> 🕒 **最后自动更新时间**：\`{bj_time} (北京时间)\`\\n> 📦 **全量文件发布**：\`epg_ultimate.xml.gz\` / \`fury_posters.tar.gz\`\\n> 💡 *提示：点击上方 Release 按钮可快速下载最新文件。*'
+          
+          with open('README.md', 'r', encoding='utf-8') as f:
+              content = f.read()
+          
+          pattern = r'(<!-- RELEASE_LOG_START -->).*?(<!-- RELEASE_LOG_END -->)'
+          replacement = f'\\\\1\\n{report}\\n\\\\2'
+          new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+          
+          with open('README.md', 'w', encoding='utf-8') as f:
+              f.write(new_content)
+          "
+          
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "docs: auto update release status in README [skip ci]" || echo "No changes to commit"
+          git push
 
       - name: Upload Artifacts (Internal Debug)
         uses: actions/upload-artifact@v4
