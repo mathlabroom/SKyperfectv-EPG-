@@ -8,7 +8,9 @@
 
 ## 📅 自动化更新日志
 <!-- RELEASE_LOG_START -->
-> 🕒 **最后更新时间**：等待第一次工作流自动更新...
+> 🕒 **最后自动更新时间**：`2026-10-20 10:22:04 (北京时间)`
+> 📦 **全量文件发布**：`epg_ultimate.xml.gz` / `fury_posters.tar.gz`
+> 💡 *提示：点击上方 Release 按钮可快速下载最新文件。*
 <!-- RELEASE_LOG_END -->
 
 ## 功能/Function
