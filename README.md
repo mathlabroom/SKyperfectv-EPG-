@@ -15,10 +15,11 @@
  https://github.com/mathlabroom/SKyperfectv-EPG-/releases/download/latest/fury_posters.tar.gz
 
 ##
-<!-- 1. 最新版本号徽章 -->
-![Latest Release](https://img.shields.io/github/v/release/mathlabroom/SKyperfectv-EPG-?include_prereleases&label=Latest%20Release&color=blue)
-<!-- 2. 最近发布时间徽章 -->
-![Release Date](https://img.shields.io/github/release-date/mathlabroom/SKyperfectv-EPG-?label=Updated)
+<!-- 点击第一个徽章会跳转到你的 Releases 页面 -->
+[![Latest Release](https://img.shields.io/github/v/release/mathlabroom/SKyperfectv-EPG-?include_prereleases&label=Latest%20Release&color=blue)](https://github.com/mathlabroom/SKyperfectv-EPG-/releases/latest)
+
+<!-- 点击第二个徽章会跳转到 Releases 列表页面 -->
+[![Release Date](https://img.shields.io/github/release-date/mathlabroom/SKyperfectv-EPG-?label=Updated)](https://github.com/mathlabroom/SKyperfectv-EPG-/releases)
 
 ## 效果图
 <img width="960" height="540" alt="image" src="https://github.com/user-attachments/assets/12185c41-aa54-41b0-a3f9-8063a1dbc868" />
