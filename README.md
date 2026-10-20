@@ -17,7 +17,6 @@
 ##
 <!-- 1. 最新版本号徽章 -->
 ![Latest Release](https://img.shields.io/github/v/release/mathlabroom/SKyperfectv-EPG-?include_prereleases&label=Latest%20Release&color=blue)
-
 <!-- 2. 最近发布时间徽章 -->
 ![Release Date](https://img.shields.io/github/release-date/mathlabroom/SKyperfectv-EPG-?label=Updated)
 
