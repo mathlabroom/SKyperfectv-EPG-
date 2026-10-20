@@ -1,3 +1,16 @@
+# SKyperfectv EPG Auto Collector
+
+<!-- 1. 动态徽章展示区（支持点击直接跳转） -->
+[![Latest Release](https://img.shields.io/github/v/release/mathlabroom/SKyperfectv-EPG-?include_prereleases&label=Latest%20Release&color=blue)](https://github.com/mathlabroom/SKyperfectv-EPG-/releases/latest)
+[![Release Date](https://img.shields.io/github/release-date/mathlabroom/SKyperfectv-EPG-?label=Updated)](https://github.com/mathlabroom/SKyperfectv-EPG-/releases)
+
+---
+
+## 📅 自动化更新日志
+<!-- RELEASE_LOG_START -->
+> 🕒 **最后更新时间**：等待第一次工作流自动更新...
+<!-- RELEASE_LOG_END -->
+
 ## 功能/Function
 1. 每日爬取SkyperfecTV官网的EPG数据。
 2. 下载最近48小时内的节目预告图片，并重命名为Fury Skin可以识别的格式（例如：2158f4936564_1775401200），其中前面可以说是Fury对频道的识别码（不同机器可能不同），后面是unix时间戳。
@@ -13,13 +26,6 @@
 2. Posters  海报  
  https://github.com/mathlabroom/SKyperfectv-EPG-/releases/download/latest/fury_posters.zip
  https://github.com/mathlabroom/SKyperfectv-EPG-/releases/download/latest/fury_posters.tar.gz
-
-##
-<!-- 点击第一个徽章会跳转到你的 Releases 页面 -->
-[![Latest Release](https://img.shields.io/github/v/release/mathlabroom/SKyperfectv-EPG-?include_prereleases&label=Latest%20Release&color=blue)](https://github.com/mathlabroom/SKyperfectv-EPG-/releases/latest)
-
-<!-- 点击第二个徽章会跳转到 Releases 列表页面 -->
-[![Release Date](https://img.shields.io/github/release-date/mathlabroom/SKyperfectv-EPG-?label=Updated)](https://github.com/mathlabroom/SKyperfectv-EPG-/releases)
 
 ## 效果图
 <img width="960" height="540" alt="image" src="https://github.com/user-attachments/assets/12185c41-aa54-41b0-a3f9-8063a1dbc868" />
