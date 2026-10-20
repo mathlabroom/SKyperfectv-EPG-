@@ -37,7 +37,7 @@ jobs:
             ${{ runner.os }}-epg-cache-
 
       - name: Get Beijing Time
-        run: echo "BJ_TIME=$(TZ='Asia/Shanghai' date +'\%Y-\%m-\%d \%H:\%M:\%S')" >> $GITHUB_ENV
+        run: echo "BJ_TIME=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
 
       - name: Clear old posters
         run: |
@@ -115,6 +115,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # 关键新增步骤：自动更新 README 并 Git Commit（彻底重置 60 天闲置限制）
+      # 关键新增步骤：自动更新 README 并 Git Commit（彻底重置 60 天闲置限制）
       - name: Auto Update README & Keepalive (Reset 60-day Limit)
         run: |
           python3 -c "
@@ -125,9 +126,15 @@ jobs:
           with open('README.md', 'r', encoding='utf-8') as f:
               content = f.read()
           
-          # 直接匹配并替换整个注释区块，不使用正则分组（彻底避免 \1 \2 引起的组冲突）
           new_block = f'<!-- RELEASE_LOG_START -->\n{report}\n<!-- RELEASE_LOG_END -->'
-          new_content = re.sub(r'<!-- RELEASE_LOG_START -->.*?<!-- RELEASE_LOG_END -->', new_block, content, flags=re.DOTALL)
+          
+          # 使用 lambda 函数作为替换参数，彻底杜绝 re.sub 的分组/反斜杠解析错误
+          new_content = re.sub(
+              r'<!-- RELEASE_LOG_START -->.*?<!-- RELEASE_LOG_END -->',
+              lambda m: new_block,
+              content,
+              flags=re.DOTALL
+          )
           
           with open('README.md', 'w', encoding='utf-8') as f:
               f.write(new_content)
